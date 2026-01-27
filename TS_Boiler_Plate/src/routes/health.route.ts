@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { isDbReady } from "../config/connectDb";
 
 export const healthRouter = Router();
 
@@ -22,5 +23,15 @@ healthRouter.get("/health", (_req, res) => {
             uptime: process.uptime(),
             timestamp: new Date().toISOString()
         }
+    });
+});
+
+healthRouter.get("/ready", (_req, res) => {
+    const ready = isDbReady();
+    res.status(ready ? 200 : 503).json({
+        success: ready,
+        statusCode: ready ? 200 : 503,
+        message: ready ? "READY" : "NOT_READY",
+        data: { db: ready }
     });
 });
