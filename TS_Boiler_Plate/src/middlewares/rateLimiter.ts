@@ -1,0 +1,49 @@
+import rateLimit from "express-rate-limit";
+import { StatusCodes } from "http-status-codes";
+import AppError from "../errors/AppError";
+
+
+/**
+ * General API rate limiter.
+ * - Uses IP-based limiting by default
+ * - Sends errors through AppError so your global errorHandler formats the response
+ */
+const apiRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 300, // adjust for your needs (e.g., 100/15m for public APIs)
+    standardHeaders: true, // adds RateLimit-* headers (RFC-ish)
+    legacyHeaders: false,
+
+    // If you're behind a reverse proxy, set app.set("trust proxy", 1) in app.ts
+    // Otherwise req.ip may not reflect the real client IP.
+
+    handler: (req, _res, next) => {
+        next(
+            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Too many requests", [
+                { path: "rateLimit", message: `Rate limit exceeded for IP: ${req.ip}` }
+            ])
+        );
+    }
+});
+
+/**
+ * Stricter limiter for auth endpoints (login/register/forgot-password).
+ */
+const authRateLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    limit: 30, // e.g., 30 attempts per 10 minutes
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, _res, next) => {
+        next(
+            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Too many attempts", [
+                { path: "auth", message: `Too many auth attempts for IP: ${req.ip}` }
+            ])
+        );
+    }
+});
+
+export const rateLimiter = {
+    apiRateLimiter,
+    authRateLimiter
+};
