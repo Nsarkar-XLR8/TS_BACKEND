@@ -6,7 +6,7 @@ const app = createApp();
 const port = Number((config as any)?.port ?? process.env.PORT ?? 3000);
 
 const server = app.listen(port, () => {
-    logger.info({ port }, "Server started");
+    logger.info({ port }, "Server started at http://localhost:%d", port);
 });
 
 let isShuttingDown = false;

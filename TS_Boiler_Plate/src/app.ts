@@ -29,7 +29,16 @@ export function createApp() {
     app.use(express.json({ limit: "1mb" }));
     app.use(express.urlencoded({ extended: true }));
     app.use(securityHeaders);
-    app.use(mongoSanitize());
+
+    app.use((req, _res, next) => {
+        Object.defineProperty(req, "query", {
+            value: req.query,      // snapshot current query object
+            writable: true,
+            configurable: true
+        });
+        next();
+    });
+    app.use(mongoSanitize);
     app.use(timeout("15s"));
 
 
