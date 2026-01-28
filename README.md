@@ -1,3 +1,10 @@
+<div align="center">
+  <img src="https://raw.githubusercontent.com/devicons/devicon/master/icons/typescript/typescript-original.svg" alt="typescript" width="80" height="80"/>
+  <h1>🚀 Scalable TS Backend Boilerplate</h1>
+  <p><b>A production-ready, secure, and robust backend architecture built with Node.js & TypeScript.</b></p>
+</div>
+
+
 🚀 Robust & Scalable TypeScript Backend Boilerplate
 A production-ready, highly secure, and scalable backend architecture built with Node.js, Express, TypeScript, and MongoDB. This boilerplate is designed to provide a solid foundation for enterprise-level applications with a focus on security, performance, and developer experience.
 
