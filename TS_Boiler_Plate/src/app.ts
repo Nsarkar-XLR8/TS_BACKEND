@@ -29,6 +29,13 @@ export function createApp() {
     app.use(express.json({ limit: "1mb" }));
     app.use(express.urlencoded({ extended: true, limit: "1mb" }));
     app.use(securityHeaders);
+    // ✅ MUST CALL IT
+    app.use(mongoSanitize());
+
+    app.use(timeout("15s"));
+
+    app.use(requestId);
+    app.use(httpLogger);
 
     // Express 5 compat shim for express-mongo-sanitize (workaround)
     app.use((req, _res, next) => {
@@ -40,18 +47,6 @@ export function createApp() {
         next();
     });
 
-    // ✅ MUST CALL IT
-    app.use(mongoSanitize());
-
-    // If you keep connect-timeout, halt timed out requests
-    app.use(timeout("15s"));
-    app.use((req, _res, next) => {
-        if ((req as any).timedout) return;
-        next();
-    });
-
-    app.use(requestId);
-    app.use(httpLogger);
 
     // Optional: root route so "/" doesn't look broken
     app.get("/", (req, res) => {

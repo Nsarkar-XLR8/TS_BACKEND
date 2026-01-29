@@ -3,28 +3,27 @@ import logger from "./logger";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function connectDB(uri: string, retries = 10) {
-    mongoose.set("strictQuery", true);
+export async function connectDB(uri: string) {
+    try {
+        mongoose.set("strictQuery", true);
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
-        try {
-            await mongoose.connect(uri);
-            logger.info(
-                { host: mongoose.connection.host, name: mongoose.connection.name },
-                "MongoDB connected"
-            );
-            return;
-        } catch (err) {
-            logger.error({ err, attempt }, "MongoDB connect failed");
-            if (attempt === retries) throw err;
-            await sleep(1500);
-        }
+        // Let Mongoose handle the connection with a 5-second timeout
+        await mongoose.connect(uri, {
+            serverSelectionTimeoutMS: 5000,
+        });
+
+        logger.info("✅ MongoDB connected");
+    } catch (err) {
+        logger.error({ err }, "❌ MongoDB connection failed");
+        process.exit(1); // Exit immediately so the terminal doesn't hang
     }
 }
 
 export async function disconnectDB() {
-    await mongoose.connection.close();
-    logger.info("MongoDB disconnected");
+    if (mongoose.connection.readyState !== 0) {
+        await mongoose.disconnect();
+        logger.info("MongoDB disconnected");
+    }
 }
 
 export function isDbReady() {
