@@ -38,6 +38,8 @@ This boilerplate provides a solid foundation for **enterprise-level applications
 
 ---
 
+```bash
+
 ## 📁 Project Structure
 src/
 ├── config/        # Environment variables and third-party configs
@@ -53,6 +55,7 @@ src/
 
 
 ---
+```
 
 ## 🚀 Getting Started
 
