@@ -6,6 +6,8 @@ import { ILoginCredentials, ILoginResponse } from './auth.interface';
 import { createToken } from '../../utils/jwt';
 import { IUser } from '../user/user.interface';
 import { sendEmail } from '../../utils/sendEmail';
+import jwt from 'jsonwebtoken';
+
 
 
 
@@ -53,9 +55,7 @@ const registerUser = async (payload: IUser) => {
         lastName: newUser.lastName
     };
 };
-/**
- * Verify Email via OTP
- */
+
 const verifyEmail = async (email: string, otp: string) => {
     // 1. Find user (Explicitly select OTP fields)
     const user = await User.findOne({ email }).select('+otp +otpExpires');
@@ -75,7 +75,7 @@ const verifyEmail = async (email: string, otp: string) => {
 
     // 3. Update User status and Clear OTP
     user.isVerified = true;
-    user.otp = undefined; // Using undefined because of our strict interface
+    user.otp = undefined;
     user.otpExpires = undefined;
     await user.save();
 
@@ -138,14 +138,95 @@ const loginUser = async (payload: ILoginCredentials): Promise<ILoginResponse> =>
             lastName: user.lastName,
             email: user.email,
             role: user.role,
-            avatar: user.avatar, // This will now pass as string | undefined is allowed
+            avatar: user.avatar,
         },
     };
 
+};
+
+const forgotPassword = async (email: string) => {
+    const user = await User.findOne({ email });
+
+    // Security: If user doesn't exist, don't throw error. 
+    // Return early so controller can send generic success.
+    if (!user) return;
+
+    // 1. Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+    // 2. Update User Record
+    await User.findByIdAndUpdate(user._id, {
+        otp,
+        otpExpires,
+    });
+
+    // 3. Send Email
+    const emailResult = await sendEmail({
+        to: user.email,
+        subject: 'Password Reset OTP',
+        html: `<div>Your OTP is: <b>${otp}</b>. It expires in 10 minutes.</div>`,
+    });
+
+    if (!emailResult.success) {
+        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to send email');
+    }
+};
+
+const verifyOtp = async (payload: { email: string; otp: string }) => {
+    // 1. Find user with matching email, otp, and check if not expired
+    const user = await User.findOne({
+        email: payload.email,
+        otp: payload.otp,
+        otpExpires: { $gt: new Date() }, // Check if current time < expiry
+    });
+
+    if (!user) {
+        throw AppError.of(StatusCodes.BAD_REQUEST, 'Invalid or expired OTP');
+    }
+
+    // 2. Generate a short-lived Reset Token (15 mins)
+    // Elite Tip: Use a specific secret for reset tokens to prevent misuse
+    const resetToken = jwt.sign(
+        { email: user.email, role: user.role, type: 'password_reset' },
+        config.jwt.jwtAccesSecret as string,
+        { expiresIn: '15m' }
+    );
+
+    return { resetToken };
+};
+
+
+// Remove confirmPassword from here. It is useless at this layer.
+const resetPassword = async (token: string, newPassword: string) => {
+    let decoded;
+    try {
+        // Ensure you are using the correct secret from your config
+        decoded = jwt.verify(token, config.jwt.jwtAccesSecret as string) as any;
+    } catch (err) {
+        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid or expired reset token');
+    }
+
+    if (decoded.type !== 'password_reset') {
+        throw AppError.of(StatusCodes.FORBIDDEN, 'Invalid token type');
+    }
+
+    const user = await User.findOne({ email: decoded.email });
+    if (!user) throw AppError.of(StatusCodes.NOT_FOUND, 'User not found');
+
+    // Update and Wipe
+    user.password = newPassword;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+
+    await user.save(); // Must use .save() to trigger hashing middleware
 };
 
 export const AuthService = {
     registerUser,
     verifyEmail,
     loginUser,
+    forgotPassword,
+    verifyOtp,
+    resetPassword
 };

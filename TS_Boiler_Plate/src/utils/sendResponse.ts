@@ -9,6 +9,7 @@ export type PaginationMeta = {
 
 export type SuccessResponse<TData, TExtras extends Record<string, unknown> = Record<string, never>> = {
     statusCode: number;
+    success?: boolean;
     message: string;
     data?: TData;
     meta?: PaginationMeta;

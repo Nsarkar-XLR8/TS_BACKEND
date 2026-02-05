@@ -24,8 +24,38 @@ const verifyEmailSchema = z.object({
     }),
 });
 
+
+const forgotPasswordSchema = z.object({
+    body: z.object({ email: z.string().email() }),
+})
+
+const resendOtpSchema = z.object({
+    body: z.object({ email: z.string().email() }),
+})
+
+const verifyOtpSchema = z.object({
+    body: z.object({
+        email: z.string().email(),
+        otp: z.string().length(6)
+    }),
+})
+
+const resetPasswordSchema = z.object({
+    body: z.object({
+        newPassword: z.string().min(6, "Password must be at least 8 characters"),
+        confirmPassword: z.string().min(6)
+    }).refine((data) => data.newPassword === data.confirmPassword, {
+        message: "Passwords do not match",
+        path: ["confirmPassword"], // Error will point to confirmPassword field
+    }),
+});
+
 export const AuthValidation = {
     registerSchema,
     loginSchema,
     verifyEmailSchema,
+    forgotPasswordSchema,
+    resendOtpSchema,
+    verifyOtpSchema,
+    resetPasswordSchema
 };
