@@ -55,6 +55,8 @@ const config = {
     jwt: {
         secret: env.JWT_SECRET,
         expiresIn: env.JWT_EXPIRES_IN,
+        jwtAccesSecret: env.JWT_SECRET,
+        jwtExpiresIn: env.JWT_EXPIRES_IN,
         refreshSecret: env.JWT_REFRESH_TOKEN_SECRET,
         refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN
     },

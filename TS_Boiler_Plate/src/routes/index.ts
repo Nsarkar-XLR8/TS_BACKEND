@@ -1,31 +1,48 @@
-import { Router, type Router as ExpressRouter } from "express";
+// import { Router, type Router as ExpressRouter } from "express";
+
+// import { healthRouter } from './health.route';
 
 
+// const router = Router();
+// const admin = Router();
+// // import authRouter from "../modules/auth/auth.router";
+// // import userRouter from "../modules/user/user.router";
+// // import dashboardRouter from "../modules/dashboard/dashboard.router";
 
-// import authRouter from "../modules/auth/auth.router";
-// import userRouter from "../modules/user/user.router";
-// import dashboardRouter from "../modules/dashboard/dashboard.router";
-import { healthRouter } from './health.route';
+// type ModuleRoute = { path: `/${string}`; route: ExpressRouter };
 
-type ModuleRoute = { path: `/${string}`; route: ExpressRouter };
+// router.use(healthRouter);
+
+
+// const publicRoutes: ModuleRoute[] = [
+//     // { path: "/auth", route: authRouter },
+//     // { path: "/user", route: userRouter }
+// ];
+
+// const adminRoutes: ModuleRoute[] = [
+//     // { path: "/dashboard", route: dashboardRouter }
+// ];
+
+// publicRoutes.forEach(({ path, route }) => router.use(path, route));
+// adminRoutes.forEach(({ path, route }) => admin.use(path, route));
+
+// router.use("/admin", admin);
+
+// export default router;
+
+
+import { Router } from 'express';
+import { AuthRoutes } from '../modules/auth/auth.route';
 
 const router = Router();
-router.use(healthRouter);
 
-const admin = Router();
-
-const publicRoutes: ModuleRoute[] = [
-    // { path: "/auth", route: authRouter },
-    // { path: "/user", route: userRouter }
+const moduleRoutes = [
+    {
+        path: '/auth',
+        route: AuthRoutes,
+    },
 ];
 
-const adminRoutes: ModuleRoute[] = [
-    // { path: "/dashboard", route: dashboardRouter }
-];
-
-publicRoutes.forEach(({ path, route }) => router.use(path, route));
-adminRoutes.forEach(({ path, route }) => admin.use(path, route));
-
-router.use("/admin", admin);
+moduleRoutes.forEach((route) => router.use(route.path, route.route));
 
 export default router;

@@ -1,11 +1,23 @@
-import jwt, { type JwtPayload } from "jsonwebtoken";
+import jwt, { Secret, SignOptions, type JwtPayload } from "jsonwebtoken";
 import { StatusCodes } from "http-status-codes";
 import AppError from "../errors/AppError";
+type StringValue = number | string;
 
 
 export type JwtUserPayload = JwtPayload & {
     userId?: string;
     role?: string;
+    email: string;
+};
+
+export const createToken = (
+    payload: JwtUserPayload,
+    secret: Secret,
+    expiresIn: StringValue // Use StringValue directly
+): string => {
+    return jwt.sign(payload, secret, {
+        expiresIn,
+    } as SignOptions); // Cast the whole object to bypass strict optional check
 };
 
 function getJwtSecret(): string {

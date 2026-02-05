@@ -1,24 +1,29 @@
-import type { RequestHandler } from "express";
-import type { ZodTypeAny } from "zod";
+import { NextFunction, Request, Response } from 'express';
+import { ZodObject } from 'zod';
+import catchAsync from '../utils/catchAsync';
 
-type SchemaShape = Partial<{
-    body: ZodTypeAny;
-    query: ZodTypeAny;
-    params: ZodTypeAny;
-}>;
+/**
+ * ELITE MIDDLEWARE:
+ * Matches the schema structure { body, query, params } directly 
+ * against the Express request object.
+ */
+const validateRequest = (schema: ZodObject) => {
+    return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+        const parsed = await schema.parseAsync({
+            body: req.body,
+            query: req.query,
+            params: req.params,
+        });
 
-export const validateRequest = (schema: SchemaShape): RequestHandler => {
-    return (req, _res, next) => {
-        try {
-            req.validated = req.validated ?? {};
+        // Attach parsed data to req.validated for type-safe access in controllers
+        req.validated = {
+            body: parsed.body,
+            query: parsed.query,
+            params: parsed.params,
+        };
 
-            if (schema.body) req.validated.body = schema.body.parse(req.body);
-            if (schema.query) req.validated.query = schema.query.parse(req.query);
-            if (schema.params) req.validated.params = schema.params.parse(req.params);
-
-            next();
-        } catch (err) {
-            next(err);
-        }
-    };
+        next();
+    });
 };
+
+export default validateRequest;
