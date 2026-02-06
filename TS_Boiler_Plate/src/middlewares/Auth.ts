@@ -69,6 +69,7 @@ function verifyAccessToken(token: string): { userId: string; role: UserRole; iat
  *   router.get("/admin", Auth(USER_ROLE.ADMIN), handler)
  *   router.get("/staff", Auth(USER_ROLE.ADMIN, USER_ROLE.SUPER_ADMIN), handler)
  */
+
 export const Auth =
     (...allowedRoles: UserRole[]): RequestHandler =>
         (req, _res, next) => {
@@ -82,7 +83,8 @@ export const Auth =
 
                 const { userId, role, iat, exp } = verifyAccessToken(token);
 
-                // req.user = { userId, role, iat, exp };
+                // FIX: Actually attach the data to the request object
+                req.user = { userId, role, iat, exp } as { userId: string; role: UserRole; iat?: number; exp?: number; };
 
                 if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
                     throw AppError.of(StatusCodes.FORBIDDEN, "Forbidden", [

@@ -15,17 +15,18 @@ declare global {
         interface Request {
             requestId?: string;
 
-            validated?: {
-                body?: unknown;
-                query?: unknown;
-                params?: unknown;
-            };
 
             user?: {
                 userId: string;
                 role: UserRole;
                 iat?: number;
                 exp?: number;
+            };
+
+            validated?: {
+                body?: any;
+                query?: any;
+                params?: any;
             };
         }
     }

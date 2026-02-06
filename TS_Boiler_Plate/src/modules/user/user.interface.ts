@@ -15,16 +15,16 @@ export interface IUser {
 }
 
 export interface IUserResponse {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: UserRole;
-  avatar?: string | undefined;
+    _id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: UserRole;
+    avatar?: string | undefined;
 }
 
 
-// export type IUserResponse = Pick<IUser, 'firstName' | 'lastName' | 'email' | 'role' | 'avatar'> & { _id: string };
+
 
 export interface UserModel extends Model<IUser> {
     isPasswordMatch(plainText: string, hashed: string): Promise<boolean>;
