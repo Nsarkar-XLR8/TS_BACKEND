@@ -1,3 +1,52 @@
+// import type { Response } from "express";
+
+// export type PaginationMeta = {
+//     limit: number;
+//     page: number;
+//     total: number;
+//     totalPage: number;
+// };
+
+// export type SuccessResponse<TData, TExtras extends Record<string, unknown> = Record<string, never>> = {
+//     statusCode: number;
+//     success?: boolean;
+//     message: string;
+//     data?: TData;
+//     meta?: PaginationMeta;
+//     requestId?: string;
+
+//     /**
+//      * For feature-specific additions (analytics, recentOrders, etc.)
+//      * Keeps the envelope stable while allowing growth safely.
+//      */
+//     extras?: TExtras;
+// };
+
+// export function sendResponse<TData, TExtras extends Record<string, unknown> = Record<string, never>>(
+//     res: Response,
+//     payload: SuccessResponse<TData, TExtras>
+// ) {
+//     const { statusCode, message, data, meta, requestId, extras } = payload;
+
+//     return res.status(statusCode).json({
+//         success: true,
+//         statusCode,
+//         message,
+//         ...(requestId !== undefined ? { requestId } : {}),
+//         ...(data !== undefined ? { data } : {}),
+//         ...(meta !== undefined ? { meta } : {}),
+//         ...(extras !== undefined ? extras : {})
+//     });
+// }
+
+
+
+
+
+
+
+
+
 import type { Response } from "express";
 
 export type PaginationMeta = {
@@ -7,34 +56,35 @@ export type PaginationMeta = {
     totalPage: number;
 };
 
-export type SuccessResponse<TData, TExtras extends Record<string, unknown> = Record<string, never>> = {
-    statusCode: number;
+export type SuccessResponse<TData, TExtras extends Record<string, unknown> = Record<string, unknown>> = {
     success?: boolean;
+    statusCode: number;
     message: string;
     data?: TData;
     meta?: PaginationMeta;
     requestId?: string;
-
-    /**
-     * For feature-specific additions (analytics, recentOrders, etc.)
-     * Keeps the envelope stable while allowing growth safely.
-     */
-    extras?: TExtras;
+    extras?: TExtras; // stays nested to avoid collisions
 };
 
-export function sendResponse<TData, TExtras extends Record<string, unknown> = Record<string, never>>(
+export function sendResponse<TData, TExtras extends Record<string, unknown> = Record<string, unknown>>(
     res: Response,
     payload: SuccessResponse<TData, TExtras>
 ) {
     const { statusCode, message, data, meta, requestId, extras } = payload;
 
+    const headerRequestId = res.getHeader("x-request-id");
+    const resolvedRequestId =
+        requestId ??
+        (typeof headerRequestId === "string" && headerRequestId.length > 0 ? headerRequestId : undefined);
+
     return res.status(statusCode).json({
-        success: true,
+        success: true as const,
+        // Optional: include or remove statusCode depending on your API standard
         statusCode,
         message,
-        ...(requestId !== undefined ? { requestId } : {}),
+        ...(resolvedRequestId ? { requestId: resolvedRequestId } : {}),
         ...(data !== undefined ? { data } : {}),
         ...(meta !== undefined ? { meta } : {}),
-        ...(extras !== undefined ? extras : {})
+        ...(extras !== undefined ? { extras } : {}),
     });
 }

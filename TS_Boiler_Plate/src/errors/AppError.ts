@@ -3,6 +3,7 @@ import type { TErrorSource } from "./error.types";
 
 export interface AppErrorOptions {
     statusCode: number;
+    code?: string;
     message?: string;
     isOperational?: boolean;
     errorSource?: TErrorSource;
@@ -25,13 +26,15 @@ function buildOptions(
 
 class AppError extends Error {
     public readonly statusCode: number;
+    public readonly code: string;
     public readonly isOperational: boolean;
     public readonly errorSource: TErrorSource;
 
-    constructor({ statusCode, message, isOperational = true, errorSource }: AppErrorOptions) {
+    constructor({ statusCode, code, message, isOperational = true, errorSource }: AppErrorOptions) {
         super(message ?? getReasonPhrase(statusCode));
 
         this.statusCode = statusCode;
+        this.code = code ?? `HTTP_${statusCode}`;
         this.isOperational = isOperational;
         this.errorSource = errorSource ?? [{ path: "general", message: this.message }];
 
@@ -65,5 +68,17 @@ class AppError extends Error {
         // Operational: validation / bad input
         return new AppError(buildOptions(StatusCodes.UNPROCESSABLE_ENTITY, message ?? "Validation failed", errorSource, true));
     }
+
+
+    static invalidCredentials() {
+        return new AppError({
+            statusCode: StatusCodes.UNAUTHORIZED,
+            code: "AUTH_INVALID_CREDENTIALS",
+            message: "Invalid credentials",
+            errorSource: [{ path: "auth", message: "Invalid credentials" }],
+            isOperational: true,
+        });
+    }
+
 }
 export default AppError;

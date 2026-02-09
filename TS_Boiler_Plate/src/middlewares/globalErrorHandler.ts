@@ -50,6 +50,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
         return sendError({
             res,
             statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
+            code: "HTTP_INTERNAL_SERVER_ERROR",
             message: "Something went wrong",
             errorSource: [{ path: "general", message: "Internal Server Error" }],
             ...(req.requestId !== undefined ? { requestId: req.requestId } : {})
@@ -59,6 +60,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     return sendError({
         res,
         statusCode: normalized.statusCode,
+        code: normalized.code,
         message: normalized.message,
         errorSource: normalized.errorSource,
         ...(req.requestId !== undefined ? { requestId: req.requestId } : {}),

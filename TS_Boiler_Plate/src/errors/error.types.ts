@@ -5,6 +5,7 @@ export type TErrorSource = {
 
 export type TGenericErrorResponse = {
     success: false;
+    code: string;
     message: string;
     errorSource: TErrorSource;
     stack?: string;

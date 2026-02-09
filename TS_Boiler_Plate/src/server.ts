@@ -1,9 +1,13 @@
+import "./observability/otel";
+
 import "./config/env";
 import { createApp } from "./app";
 import { connectDB, disconnectDB } from "./config/connectDB";
-import logger from "./config/logger";
 import { Server } from "node:http";
 import config from "./config";
+import { logger } from "./config/logger";
+
+
 // --- 1. ENHANCED ERROR CATCHING ---
 const handleFatalError = (err: any, type: string) => {
     // We log the FULL error stack here

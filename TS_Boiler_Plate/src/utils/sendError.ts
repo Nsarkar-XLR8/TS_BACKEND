@@ -4,6 +4,7 @@ import type { TErrorSource, TGenericErrorResponse } from "../errors/error.types"
 type SendErrorArgs = {
     res: Response;
     statusCode: number;
+    code: string;
     message: string;
     errorSource: TErrorSource;
     requestId?: string;
@@ -16,10 +17,11 @@ function isDevLikeEnv() {
 }
 
 export function sendError(args: SendErrorArgs) {
-    const { res, statusCode, message, errorSource, requestId, stack } = args;
+    const { res, statusCode, code, message, errorSource, requestId, stack } = args;
 
     const payload: TGenericErrorResponse = {
         success: false,
+        code,
         message,
         errorSource
     };

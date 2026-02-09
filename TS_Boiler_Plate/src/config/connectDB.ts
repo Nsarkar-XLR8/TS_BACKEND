@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
-import logger from "./logger";
+import { logger } from "./logger";
+
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

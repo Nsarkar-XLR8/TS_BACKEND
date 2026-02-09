@@ -15,6 +15,7 @@ import { requestId } from "./middlewares/requestId";
 import { httpLogger } from "./middlewares/httpLogger";
 import { rateLimiter } from "./middlewares/rateLimiter";
 import { securityHeaders } from "./middlewares/security";
+import { metricsHandler, metricsMiddleware } from "./observability/metrics";
 
 
 export function createApp() {
@@ -39,7 +40,12 @@ export function createApp() {
 
     // 3. CORE SECURITY HEADERS
     app.use(helmet());
-    app.use(cors({ origin: true, credentials: true })); 
+    app.use(cors({
+        origin: true,
+        credentials: true,
+        exposedHeaders: ["x-request-id"],
+    }));
+
     app.use(hpp());
     app.use(securityHeaders);
 
@@ -55,6 +61,11 @@ export function createApp() {
     app.use(timeout("15s"));
     app.use(requestId);
     app.use(httpLogger);
+
+
+    app.use(metricsMiddleware);
+
+    app.get("/metrics", metricsHandler);
 
     // 7. PUBLIC ROUTES
     app.get("/", (req, res) => {

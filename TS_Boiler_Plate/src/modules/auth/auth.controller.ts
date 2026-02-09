@@ -4,46 +4,59 @@ import { sendResponse } from "../../utils/sendResponse";
 import { AuthService } from "./auth.service";
 import config from "../../config";
 import AppError from "../../errors/AppError";
+import { getAuthTokenMeta } from "../../utils/tokenMeta";
 
 
 const loginUser = catchAsync(async (req, res) => {
     const result = await AuthService.loginUser(req.body);
     const { refreshToken, accessToken, user } = result;
 
-    // FIX: Access the property directly and fix the logic
-    // Secure should be TRUE in production, FALSE in development (unless using local HTTPS)
-    const isProduction = config.nodeEnv === "production";
+    const safeUser = {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+    };
 
-    res.cookie("refreshToken", refreshToken, {
-        secure: isProduction,
-        httpOnly: true,
-        sameSite: isProduction ? "none" : "lax",
-        maxAge: 365 * 24 * 60 * 60 * 1000,
-    });
+    const meta = getAuthTokenMeta();
 
     sendResponse(res, {
         statusCode: StatusCodes.OK,
-        success: true,
         message: "User logged in successfully",
         data: {
             accessToken,
-            refreshToken,
-            user,
+            refreshToken, // you said you need it in JSON
+            ...meta,
+            user: safeUser,
         },
     });
 });
 
 
+
+
 const registerUser = catchAsync(async (req, res) => {
     const result = await AuthService.registerUser(req.body);
 
+    // If register returns Mongoose doc, map it to API shape here (id instead of _id)
+    const safeUser = {
+        id: result._id,
+        email: result.email,
+        firstName: result.firstName,
+        lastName: result.lastName,
+    };
+
     sendResponse(res, {
         statusCode: StatusCodes.CREATED,
-        success: true,
         message: "User registered successfully. Please check your email for OTP.",
-        data: result,
+        data: safeUser,
     });
 });
+
+
+
 
 const verifyEmail = catchAsync(async (req, res) => {
     const { email, otp } = req.body;
@@ -51,9 +64,8 @@ const verifyEmail = catchAsync(async (req, res) => {
 
     sendResponse(res, {
         statusCode: StatusCodes.OK,
-        success: true,
         message: "Email verified successfully. You can now login.",
-        data: result,
+        data: result, // { verified: true }
     });
 });
 
@@ -71,6 +83,8 @@ const forgotPassword = catchAsync(async (req, res) => {
         data: null,
     });
 });
+
+
 
 const verifyOtp = catchAsync(async (req, res) => {
     const result = await AuthService.verifyOtp(req.body);
