@@ -29,7 +29,7 @@ function extractToken(req: Request): string | undefined {
     }
 
     // Optional cookie support (safe even without cookie-parser)
-    const cookies = (req as unknown as { cookies?: Record<string, unknown> }).cookies;
+    const {cookies} = req as unknown as { cookies?: Record<string, unknown> };
     const cookieToken = cookies?.accessToken;
     if (typeof cookieToken === "string" && cookieToken.length > 0) return cookieToken;
 
