@@ -1,9 +1,8 @@
 import nodemailer, { type Transporter, type SendMailOptions } from "nodemailer";
 import { StatusCodes } from "http-status-codes";
-
 import AppError from "../errors/AppError";
-import logger from "../config/logger"; // your pino logger default export
 import config from "../config";
+import { logger } from "../config/logger";
 
 export type SendEmailInput = {
     to: string | string[];
