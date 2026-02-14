@@ -27,3 +27,8 @@ const validateRequest = (schema: ZodObject) => {
 };
 
 export default validateRequest;
+
+
+
+
+
