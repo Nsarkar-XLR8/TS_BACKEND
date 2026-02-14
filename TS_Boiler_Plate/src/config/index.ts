@@ -85,7 +85,7 @@ const config = {
 
     frontend: {
         resetPasswordUrl: env.RESET_PASSWORD_URL,
-        url: env.FRONT_END_URL
+        url: env.FRONT_END_URL,
     },
 
     stripe: {
@@ -94,7 +94,12 @@ const config = {
         stripeAdminWebhookUrl: env.STRIPE_WEBHOOK_ADMIN_URL,
         stripeOnboardWebhookSecret: env.STRIPE_ONBOARDING_SECRET_KEY,
         stripeOnboardWebhookUrl: env.STRIPE_ONBOARDING_WEBHOOK_URL
-    }
+    },
+
+    logger: {
+        level: env.NODE_ENV === "production" ? "info" : "debug"
+    },
+     swagger_enabled: true,
 };
 
 export default config;
