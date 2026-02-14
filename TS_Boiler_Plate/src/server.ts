@@ -1,5 +1,4 @@
-import "./observability/otel";
-
+import "./observability/otel"; // Must be first
 import "./config/env";
 import { createApp } from "./app";
 import { connectDB, disconnectDB } from "./config/connectDB";
@@ -7,99 +6,61 @@ import { Server } from "node:http";
 import config from "./config";
 import { logger } from "./config/logger";
 
+const app = createApp();
 
-// --- 1. ENHANCED ERROR CATCHING ---
-const handleFatalError = (err: any, type: string) => {
-    // We log the FULL error stack here
-    console.error(`\n=== FATAL ${type} ===`);
-    console.error(err);
-    console.error(`=========================\n`);
-
-    // Delay exit so you can read the error in PowerShell
-    setTimeout(() => process.exit(1), config.port);
+/**
+ * Handles fatal errors that occur outside the Express context.
+ * Uses a fixed 1s delay to allow the logger to flush.
+ */
+const handleFatalError = (err: unknown, type: string) => {
+    logger.fatal({ err }, `FATAL ${type} DETECTED`);
+    setTimeout(() => process.exit(1), 1000);
 };
 
 process.on("uncaughtException", (err) => handleFatalError(err, "EXCEPTION"));
 process.on("unhandledRejection", (reason) => handleFatalError(reason, "REJECTION"));
 
-const app = createApp();
-// const port = Number(process.env.PORT ?? 5000);
-
-// async function bootstrap() {
-//     await connectDB(process.env.MONGODB_URL!);
-
-//     const server: Server = app.listen(config.port, () => {
-//         logger.info(`🚀 Server ready at http://localhost:${config.port}`);
-//     });
-
-//     const shutdown = (signal: string) => {
-//         logger.warn(`\n[${signal}] - Graceful shutdown initiated.`);
-
-//         // 1. Immediately kill idle 'Keep-Alive' connections 
-//         // This is what prevents the terminal from hanging!
-//         if (typeof server.closeAllConnections === 'function') {
-//             server.closeAllConnections();
-//         }
-
-//         // 2. Stop accepting new requests
-//         server.close(async (err?: Error) => {
-//             if (err) {
-//                 logger.error({ err }, "Error during server close");
-//                 process.exit(1);
-//             }
-
-//             try {
-//                 // 3. Close DB connection
-//                 await disconnectDB();
-//                 logger.info("✅ All systems shut down cleanly.");
-//                 process.exit(0);
-//             } catch (dbErr) {
-//                 logger.error({ dbErr }, "Error closing database");
-//                 process.exit(1);
-//             }
-//         });
-
-//         // 4. Force-kill if it takes too long (the safety valve)
-//         setTimeout(() => {
-//             logger.fatal("Forcefully shutting down (timeout reached).");
-//             process.exit(1);
-//         }, 3000).unref();
-//     };
-
-//     process.on("SIGINT", () => shutdown("SIGINT"));
-//     process.on("SIGTERM", () => shutdown("SIGTERM"));
-// }
-
-
 async function bootstrap() {
-    try {
-        await connectDB(process.env.MONGODB_URL!);
+    let server: Server;
 
-        const server: Server = app.listen(config.port, () => {
-            logger.info(`🚀 Server ready at http://localhost:${config.port}`);
+    try {
+        await connectDB(config.mongodbUrl);
+
+        server = app.listen(config.port, () => {
+            logger.info({ port: config.port, env: config.nodeEnv }, "🚀 Server Synchronized");
         });
 
-        // Graceful Shutdown
         const shutdown = (signal: string) => {
-            logger.warn(`\n[${signal}] - Shutting down.`);
+            logger.warn(`[${signal}] - Initiating clean exit.`);
 
-            // Kill idle connections immediately to prevent terminal hang
-            if (server.closeAllConnections) server.closeAllConnections();
+            // 1. Close idle connections to release the port immediately
+            if (server && server.closeAllConnections) server.closeAllConnections();
 
-            server.close(async (err?: Error) => {
-                await disconnectDB();
-                process.exit(err ? 1 : 0);
+            // 2. Stop the server
+            server.close(async (err) => {
+                try {
+                    // 3. Close DB connection ONLY after server is stopped
+                    await disconnectDB();
+                    logger.info("Graceful shutdown successful.");
+                    process.exit(err ? 1 : 0); // Force Exit Code 0 for success
+                } catch (dbErr) {
+                    logger.error(dbErr);
+                    process.exit(1);
+                }
             });
 
-            // Force exit after 2s if it gets stuck
-            setTimeout(() => process.exit(1), 2000).unref();
+            // 4. Emergency force-exit (The Safety Valve)
+            setTimeout(() => {
+                logger.error("Shutdown timed out. Forcing exit.");
+                process.exit(1);
+            }, 4000).unref();
         };
 
         process.on("SIGINT", () => shutdown("SIGINT"));
         process.on("SIGTERM", () => shutdown("SIGTERM"));
 
     } catch (err) {
-        logger.error({ err }, "Bootstrap failed");
+        logger.error({ err }, "Bootstrap sequence failed");
         process.exit(1);
     }
 }

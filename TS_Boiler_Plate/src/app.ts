@@ -6,7 +6,6 @@ import hpp from "hpp";
 import timeout from "connect-timeout";
 import swaggerUi from "swagger-ui-express";
 import mongoSanitize from "express-mongo-sanitize";
-
 import router from "./routes";
 import { openapiSpec } from "./config/swagger";
 import { notFound } from "./middlewares/notFound";
