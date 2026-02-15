@@ -13,6 +13,16 @@ jobs:
     defaults:
       run:
         working-directory: ./TS_Boiler_Plate
+    env:
+      NODE_ENV: test
+      MONGODB_URL: mongodb://localhost:27017/test-ci
+      JWT_SECRET: super-secret-jwt-key-for-testing
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_TOKEN_SECRET: super-secret-refresh-key-for-testing
+      JWT_REFRESH_EXPIRES_IN: 7d
+      CLOUDINARY_CLOUD_NAME: test_cloud
+      CLOUDINARY_API_KEY: 123456789
+      CLOUDINARY_API_SECRET: test_secret
 
     services:
       mongodb:
