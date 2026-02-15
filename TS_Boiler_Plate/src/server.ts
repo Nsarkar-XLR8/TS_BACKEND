@@ -61,7 +61,7 @@ if (config.nodeEnv === "production") {
     process.on("SIGTERM", () => shutdown("SIGTERM"));
 }
 
-// eslint-disable-next-line unicorn/prefer-top-level-await
+
 void (async () => {
     try {
         await connectDB(config.mongodbUrl);

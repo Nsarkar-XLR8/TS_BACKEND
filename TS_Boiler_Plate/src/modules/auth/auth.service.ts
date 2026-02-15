@@ -205,7 +205,7 @@ const resetPassword = async (token: string, newPassword: string) => {
     try {
         // Ensure you are using the correct secret from your config
         decoded = jwt.verify(token, config.jwt.jwtAccesSecret as string) as any;
-    } catch (err) {
+    } catch {
         throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid or expired reset token');
     }
 
