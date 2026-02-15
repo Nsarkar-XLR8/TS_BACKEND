@@ -20,49 +20,56 @@ const handleFatalError = (err: unknown, type: string) => {
 process.on("uncaughtException", (err) => handleFatalError(err, "EXCEPTION"));
 process.on("unhandledRejection", (reason) => handleFatalError(reason, "REJECTION"));
 
-async function bootstrap() {
-    let server: Server;
+let server: Server;
 
+const shutdown = (signal: string) => {
+    logger.info(`[${signal}] - Initiating clean exit.`);
+
+    // 1. Close idle connections to release the port immediately
+    if (server) {
+        if (server.closeAllConnections) server.closeAllConnections();
+
+        // 2. Stop the server
+        server.close((err) => {
+            if (err) {
+                logger.error({ err }, "Server close error");
+                process.exit(1);
+            }
+
+            disconnectDB().then(() => {
+                logger.info("Graceful shutdown successful.");
+                process.exit(0);
+            }).catch((error_) => {
+                logger.error({ error_ }, "DB disconnect error");
+                process.exit(1);
+            });
+        });
+    } else {
+        // If server wasn't started yet, just exit
+        process.exit(0);
+    }
+
+    // 4. Emergency force-exit (The Safety Valve)
+    setTimeout(() => {
+        logger.error("Shutdown timed out. Forcing exit.");
+        process.exit(1);
+    }, 1000).unref();
+};
+
+if (config.nodeEnv === "production") {
+    process.on("SIGINT", () => shutdown("SIGINT"));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+}
+
+// eslint-disable-next-line unicorn/prefer-top-level-await
+void (async () => {
     try {
         await connectDB(config.mongodbUrl);
-
         server = app.listen(config.port, () => {
             logger.info({ port: config.port, env: config.nodeEnv }, "🚀 Server Synchronized");
         });
-
-        const shutdown = (signal: string) => {
-            logger.warn(`[${signal}] - Initiating clean exit.`);
-
-            // 1. Close idle connections to release the port immediately
-            if (server && server.closeAllConnections) server.closeAllConnections();
-
-            // 2. Stop the server
-            server.close(async (err) => {
-                try {
-                    // 3. Close DB connection ONLY after server is stopped
-                    await disconnectDB();
-                    logger.info("Graceful shutdown successful.");
-                    process.exit(err ? 1 : 0); // Force Exit Code 0 for success
-                } catch (dbErr) {
-                    logger.error(dbErr);
-                    process.exit(1);
-                }
-            });
-
-            // 4. Emergency force-exit (The Safety Valve)
-            setTimeout(() => {
-                logger.error("Shutdown timed out. Forcing exit.");
-                process.exit(1);
-            }, 4000).unref();
-        };
-
-        process.on("SIGINT", () => shutdown("SIGINT"));
-        process.on("SIGTERM", () => shutdown("SIGTERM"));
-
     } catch (err) {
         logger.error({ err }, "Bootstrap sequence failed");
         process.exit(1);
     }
-}
-
-bootstrap();
+})();
