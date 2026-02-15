@@ -1,12 +1,12 @@
 import { StatusCodes } from 'http-status-codes';
-import config from '../../config';
-import AppError from '../../errors/AppError';
-import { User } from '../user/user.model';
-import { ILoginCredentials, ILoginResponse } from './auth.interface';
-import { createToken } from '../../utils/jwt';
-import { IUser } from '../user/user.interface';
-import { sendEmail } from '../../utils/sendEmail';
 import jwt from 'jsonwebtoken';
+import { IUser } from '../user/user.interface.js';
+import { User } from '../user/user.model.js';
+import AppError from '@/errors/AppError.js';
+import { sendEmail } from '@/utils/sendEmail.js';
+import { ILoginCredentials, ILoginResponse } from './auth.interface.js';
+import { createToken } from '@/utils/jwt.js';
+import config from '@/config/index.js';
 
 
 
