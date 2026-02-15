@@ -3,7 +3,8 @@ import bcrypt from 'bcrypt';
 import { IUser, UserModel } from './user.interface';
 import { USER_ROLE } from '../../constant/role.constant';
 import config from '../../config';
-import { NextFunction } from 'express';
+
+
 
 const userSchema = new Schema<IUser, UserModel>(
   {

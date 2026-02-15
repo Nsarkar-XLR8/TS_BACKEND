@@ -1,3 +1,4 @@
+import { StatusCodes } from "http-status-codes";
 import compression from "compression";
 import express from "express";
 import cors from "cors";
@@ -33,7 +34,7 @@ export function createApp() {
     // 3. EXPRESS 5 COMPATIBILITY SHIM 
     app.use((req, _res, next) => {
         const descriptor = Object.getOwnPropertyDescriptor(req, "query");
-        if (descriptor && descriptor.writable === false) {
+        if (descriptor?.writable === false) {
             const originalQuery = req.query;
             Object.defineProperty(req, "query", {
                 value: originalQuery,
@@ -66,9 +67,9 @@ export function createApp() {
     // 8. TELEMETRY & PUBLIC ROUTES
     app.get("/metrics", metricsHandler);
     app.get("/", (req, res) => {
-        res.status(200).json({
+        res.status(StatusCodes.OK).json({
             success: true,
-            statusCode: 200,
+            statusCode: StatusCodes.OK,
             message: "OK",
             requestId: req.requestId ?? null
         });
