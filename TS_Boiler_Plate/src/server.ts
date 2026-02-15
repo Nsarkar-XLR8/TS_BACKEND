@@ -62,14 +62,14 @@ if (config.nodeEnv === "production") {
 }
 
 
-void (async () => {
-    try {
-        await connectDB(config.mongodbUrl);
-        server = app.listen(config.port, () => {
-            logger.info({ port: config.port, env: config.nodeEnv }, "🚀 Server Synchronized");
-        });
-    } catch (err) {
-        logger.error({ err }, "Bootstrap sequence failed");
-        process.exit(1);
-    }
-})();
+
+try {
+    await connectDB(config.mongodbUrl);
+    server = app.listen(config.port, () => {
+        logger.info({ port: config.port, env: config.nodeEnv }, "🚀 Server Synchronized");
+    });
+} catch (err) {
+    logger.error({ err }, "Bootstrap sequence failed");
+    process.exit(1);
+}
+

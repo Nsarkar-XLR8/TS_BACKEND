@@ -119,14 +119,14 @@ const loginUser = async (payload: ILoginCredentials): Promise<ILoginResponse> =>
     // 5. Generate Tokens
     const accessToken = createToken(
         jwtPayload,
-        config.jwt.jwtAccesSecret as string,
-        config.jwt.jwtExpiresIn as string
+        config.jwt.jwtAccesSecret,
+        config.jwt.jwtExpiresIn
     );
 
     const refreshToken = createToken(
         jwtPayload,
-        config.jwt.refreshSecret as string,
-        config.jwt.refreshExpiresIn as string
+        config.jwt.refreshSecret,
+        config.jwt.refreshExpiresIn
     );
 
     return {
@@ -191,7 +191,7 @@ const verifyOtp = async (payload: { email: string; otp: string }) => {
     // Elite Tip: Use a specific secret for reset tokens to prevent misuse
     const resetToken = jwt.sign(
         { email: user.email, role: user.role, type: 'password_reset' },
-        config.jwt.jwtAccesSecret as string,
+        config.jwt.jwtAccesSecret,
         { expiresIn: '15m' }
     );
 
@@ -204,7 +204,7 @@ const resetPassword = async (token: string, newPassword: string) => {
     let decoded;
     try {
         // Ensure you are using the correct secret from your config
-        decoded = jwt.verify(token, config.jwt.jwtAccesSecret as string) as any;
+        decoded = jwt.verify(token, config.jwt.jwtAccesSecret) as any;
     } catch {
         throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid or expired reset token');
     }
