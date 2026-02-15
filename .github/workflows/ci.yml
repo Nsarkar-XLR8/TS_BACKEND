@@ -2,9 +2,9 @@ name: Main CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   build_and_test:
@@ -14,12 +14,12 @@ jobs:
       run:
         working-directory: ./TS_Boiler_Plate
 
-    services:
+   services:
   mongodb:
     image: mongo:6
     ports:
       - 27017:27017
-    options: >-
+    options: >
       --health-cmd "echo 'db.runCommand(\"ping\")' | mongosh localhost:27017/test --quiet"
       --health-interval 10s
       --health-timeout 5s
@@ -32,8 +32,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
           cache-dependency-path: TS_Boiler_Plate/package-lock.json
 
       - name: Install Dependencies
