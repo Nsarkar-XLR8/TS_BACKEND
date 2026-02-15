@@ -1,8 +1,9 @@
 import nodemailer, { type Transporter, type SendMailOptions } from "nodemailer";
 import { StatusCodes } from "http-status-codes";
-import AppError from "../errors/AppError";
-import config from "../config";
-import { logger } from "../config/logger";
+import config from "@/config/index.js";
+import AppError from "@/errors/AppError.js";
+import { logger } from "@/config/logger.js";
+
 
 export type SendEmailInput = {
     to: string | string[];

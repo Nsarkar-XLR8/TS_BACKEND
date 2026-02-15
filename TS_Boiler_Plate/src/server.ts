@@ -1,10 +1,12 @@
 import "./observability/otel"; // Must be first
 import "./config/env";
-import { createApp } from "./app";
-import { connectDB, disconnectDB } from "./config/connectDB";
+
 import { Server } from "node:http";
-import config from "./config";
-import { logger } from "./config/logger";
+import { createApp } from "./app.js";
+import { logger } from "./config/logger.js";
+import { connectDB, disconnectDB } from "./config/connectDB.js";
+import config from "./config/index.js";
+
 
 const app = createApp();
 
