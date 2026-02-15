@@ -85,10 +85,7 @@ function getTransporter(): Transporter {
     return transporter;
 }
 
-function toArray(v?: string | string[]): string[] {
-    if (!v) return [];
-    return Array.isArray(v) ? v : [v];
-}
+
 
 /**
  * Sends email via SMTP.

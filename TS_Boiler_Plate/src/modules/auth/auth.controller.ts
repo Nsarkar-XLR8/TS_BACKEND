@@ -2,7 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import catchAsync from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { AuthService } from "./auth.service";
-import config from "../../config";
+
 import AppError from "../../errors/AppError";
 import { getAuthTokenMeta } from "../../utils/tokenMeta";
 
@@ -65,7 +65,7 @@ const verifyEmail = catchAsync(async (req, res) => {
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         message: "Email verified successfully. You can now login.",
-        data: result, // { verified: true }
+        data: result,
     });
 });
 

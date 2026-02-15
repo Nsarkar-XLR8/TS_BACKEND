@@ -8,7 +8,7 @@ import catchAsync from '../utils/catchAsync';
  * against the Express request object.
  */
 const validateRequest = (schema: ZodObject) => {
-    return catchAsync(async (req: Request, res: Response, next: NextFunction) => {
+    return catchAsync(async (req: Request, _res: Response, next: NextFunction) => {
         const parsed = await schema.parseAsync({
             body: req.body,
             query: req.query,

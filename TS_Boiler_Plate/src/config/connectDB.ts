@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { logger } from "./logger";
 
 
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 
 export async function connectDB(uri: string) {
     try {
