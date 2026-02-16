@@ -7,12 +7,24 @@ import { handleDuplicateKeyError } from "../errors/handleDuplicateKeyError.js";
 import { handleCastError } from "../errors/handleCastError.js";
 import AppError from "../errors/AppError.js";
 
+interface ErrorWithCode {
+    code?: number;
+    name?: string;
+}
+
+interface ErrorWithStatusCodeAndMessage {
+    statusCode?: number;
+        status?: number;
+    message?: string;
+}
+
+
 function isMongoDuplicateKeyError(err: unknown): boolean {
-    return typeof err === "object" && err !== null && (err as any).code === 11000;
+    return typeof err === "object" && err !== null && (err as ErrorWithCode).code === 11000;
 }
 
 function isMongooseCastError(err: unknown): boolean {
-    return typeof err === "object" && err !== null && (err as any).name === "CastError";
+    return typeof err === "object" && err !== null && (err as ErrorWithCode).name === "CastError";
 }
 
 function normalizeError(err: unknown): AppError {
@@ -23,7 +35,7 @@ function normalizeError(err: unknown): AppError {
 
     // Respect status codes from other libs
     if (typeof err === "object" && err !== null) {
-        const anyErr = err as any;
+        const anyErr = err as ErrorWithStatusCodeAndMessage;
 
         const statusCode =
             typeof anyErr.statusCode === "number"
