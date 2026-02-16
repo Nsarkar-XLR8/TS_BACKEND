@@ -8,7 +8,11 @@ import { getAuthTokenMeta } from "../../utils/tokenMeta.js";
 
 
 const loginUser = catchAsync(async (req, res) => {
-    const result = await AuthService.loginUser(req.body);
+
+    // console.log('RAW BODY:', req.body);
+    // console.log('VALIDATED BODY:', req.validated?.body);
+
+    const result = await AuthService.loginUser(req.validated!.body);
     const { refreshToken, accessToken, user } = result;
 
     const safeUser = {
@@ -38,7 +42,7 @@ const loginUser = catchAsync(async (req, res) => {
 
 
 const registerUser = catchAsync(async (req, res) => {
-    const result = await AuthService.registerUser(req.body);
+    const result = await AuthService.registerUser(req.validated!.body);
 
     // If register returns Mongoose doc, map it to API shape here (id instead of _id)
     const safeUser = {
@@ -59,7 +63,7 @@ const registerUser = catchAsync(async (req, res) => {
 
 
 const verifyEmail = catchAsync(async (req, res) => {
-    const { email, otp } = req.body;
+    const { email, otp } = req.validated!.body;
     const result = await AuthService.verifyEmail(email, otp);
 
     sendResponse(res, {
@@ -73,7 +77,7 @@ const verifyEmail = catchAsync(async (req, res) => {
 
 
 const forgotPassword = catchAsync(async (req, res) => {
-    const { email } = req.body;
+    const { email } = req.validated!.body;
     await AuthService.forgotPassword(email);
 
     sendResponse(res, {
@@ -87,7 +91,7 @@ const forgotPassword = catchAsync(async (req, res) => {
 
 
 const verifyOtp = catchAsync(async (req, res) => {
-    const result = await AuthService.verifyOtp(req.body);
+    const result = await AuthService.verifyOtp(req.validated!.body);
 
     sendResponse(res, {
         statusCode: StatusCodes.OK,
@@ -126,7 +130,7 @@ const resetPassword = catchAsync(async (req, res) => {
     }
 
     // 3. TypeScript is now satisfied that 'token' is a string
-    await AuthService.resetPassword(token, req.body.newPassword);
+    await AuthService.resetPassword(token, req.validated!.body.newPassword);
 
     sendResponse(res, {
         statusCode: StatusCodes.OK,
