@@ -30,6 +30,7 @@ export const httpLogger = pinoHttp({
 
     customProps: (req: any) => ({
         requestId: req.requestId,
+        userId: req.user?.userId || req.user?._id,
     }),
 
     serializers: {
@@ -38,6 +39,7 @@ export const httpLogger = pinoHttp({
                 method: req.method,
                 url: req.url,
                 requestId: req.requestId,
+                contentLength: req.headers["content-length"],
             };
         },
         res(res: any) {

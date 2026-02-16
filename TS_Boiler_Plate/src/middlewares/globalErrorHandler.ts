@@ -11,6 +11,7 @@ import { handleMulterError } from "../errors/handleMulterError.js";
 import { handleJsonSyntaxError } from "../errors/handleJsonSyntaxError.js";
 import AppError from "../errors/AppError.js";
 import multer from "multer";
+import { logger } from "../config/logger.js";
 
 interface ErrorWithCode {
     code?: number;
@@ -78,6 +79,9 @@ function normalizeError(err: unknown): AppError {
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     const normalized = normalizeError(err);
+
+    // SERVER-SIDE LOGGING: Log the error with request context (traceId/spanId via mixin)
+    logger.error({ err, requestId: req.requestId }, normalized.message);
 
     // Hide details for non-operational errors in production
     if (!normalized.isOperational && (process.env.NODE_ENV ?? "development") === "production") {
