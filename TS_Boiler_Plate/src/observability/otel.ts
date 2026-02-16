@@ -20,17 +20,4 @@ export const otelSdk = new NodeSDK({
 // Start ASAP before importing express/http stuff
 otelSdk.start();
 
-// graceful shutdown
-process.on("SIGTERM", () => {
-    otelSdk
-        .shutdown()
-        .finally(() => process.exit(0));
-});
-
-process.on("SIGINT", () => {
-    otelSdk
-        .shutdown()
-        .finally(() => process.exit(0));
-});
-
 export default otelSdk;

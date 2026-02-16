@@ -1,5 +1,5 @@
-import "./observability/otel"; // Must be first
-import "./config/env";
+import { otelSdk } from "./observability/otel.js"; // Must be first
+import "./config/env.js";
 import { Server } from "node:http";
 import { createApp } from "./app.js";
 import { logger } from "./config/logger.js";
@@ -31,36 +31,41 @@ const shutdown = (signal: string) => {
         if (server.closeAllConnections) server.closeAllConnections();
 
         // 2. Stop the server
-        server.close((err) => {
+        server.close(async (err) => {
             if (err) {
                 logger.error({ err }, "Server close error");
                 process.exit(1);
             }
 
-            disconnectDB().then(() => {
+            try {
+                // 3. Disconnect DB
+                await disconnectDB();
+
+                // 4. Shutdown OTEL
+                await otelSdk.shutdown();
+
                 logger.info("Graceful shutdown successful.");
                 process.exit(0);
-            }).catch((error_) => {
-                logger.error({ error_ }, "DB disconnect error");
+            } catch (error_) {
+                logger.error({ error_ }, "Shutdown sequence error");
                 process.exit(1);
-            });
+            }
         });
     } else {
-        // If server wasn't started yet, just exit
-        process.exit(0);
+        // If server wasn't started yet, try to cleanup OTEL at least
+        otelSdk.shutdown().finally(() => process.exit(0));
     }
 
-    // 4. Emergency force-exit (The Safety Valve)
+    // 5. Emergency force-exit (The Safety Valve)
     setTimeout(() => {
         logger.error("Shutdown timed out. Forcing exit.");
         process.exit(1);
-    }, 1000).unref();
+    }, 2000).unref();
 };
 
-if (config.nodeEnv === "production") {
-    process.on("SIGINT", () => shutdown("SIGINT"));
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
-}
+// Listen for termination signals in ALL environments
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 
 
