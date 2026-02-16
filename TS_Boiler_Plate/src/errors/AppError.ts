@@ -1,5 +1,5 @@
 import { getReasonPhrase, StatusCodes } from "http-status-codes";
-import type { TErrorSource } from "./error.types";
+import type { TErrorSource } from "./error.types.js";
 
 export interface AppErrorOptions {
     statusCode: number;

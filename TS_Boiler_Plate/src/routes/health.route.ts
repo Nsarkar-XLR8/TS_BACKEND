@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isDbReady } from "../config/connectDB";
+import { isDbReady } from "../config/connectDB.js";
 
 export const healthRouter = Router();
 

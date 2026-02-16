@@ -1,6 +1,6 @@
-import { sendEmail } from "./sendEmail";
-import { renderTemplate } from "../emails/templates";
-import type { TemplateName, TemplatePayloadMap } from "../emails/types";
+import { sendEmail } from "./sendEmail.js";
+import { renderTemplate } from "../emails/templates/index.js";
+import type { TemplateName, TemplatePayloadMap } from "../emails/types.js";
 
 
 

@@ -1,5 +1,5 @@
-import { pick } from "./pick";
-import { buildPagination, type PaginationResult, type PaginationInput } from "./pagination";
+import { pick } from "./pick.js";
+import { buildPagination, type PaginationResult, type PaginationInput } from "./pagination.js";
 
 export type ApiFeaturesOptions = {
     searchableFields?: readonly string[];

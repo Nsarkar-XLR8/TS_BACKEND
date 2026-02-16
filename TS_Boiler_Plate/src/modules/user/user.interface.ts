@@ -1,5 +1,5 @@
 import { Model } from "mongoose";
-import { UserRole } from "../../constant/role.constant";
+import { UserRole } from "../../constant/role.constant.js";
 
 
 export interface IUser {

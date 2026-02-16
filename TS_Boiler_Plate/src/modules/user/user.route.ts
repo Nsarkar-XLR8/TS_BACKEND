@@ -1,9 +1,9 @@
-import { USER_ROLE } from '../../constant/role.constant';
-import { Auth } from '../../middlewares/Auth';
-import validateRequest from '../../middlewares/validateRequest';
-import { UserController } from './user.controller';
+import { USER_ROLE } from '../../constant/role.constant.js';
+import { Auth } from '../../middlewares/Auth.js';
+import validateRequest from '../../middlewares/validateRequest.js';
+import { UserController } from './user.controller.js';
 import express from 'express';
-import { UserValidation } from './user.validation';
+import { UserValidation } from './user.validation.js';
 
 const router = express.Router();
 

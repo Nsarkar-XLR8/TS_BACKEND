@@ -1,6 +1,6 @@
 import jwt, { Secret, SignOptions, type JwtPayload } from "jsonwebtoken";
 import { StatusCodes } from "http-status-codes";
-import AppError from "../errors/AppError";
+import AppError from "../errors/AppError.js";
 type StringValue = number | string;
 
 

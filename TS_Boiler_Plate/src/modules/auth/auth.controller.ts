@@ -1,10 +1,10 @@
 import { StatusCodes } from "http-status-codes";
-import catchAsync from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { AuthService } from "./auth.service";
+import catchAsync from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { AuthService } from "./auth.service.js";
 
-import AppError from "../../errors/AppError";
-import { getAuthTokenMeta } from "../../utils/tokenMeta";
+import AppError from "../../errors/AppError.js";
+import { getAuthTokenMeta } from "../../utils/tokenMeta.js";
 
 
 const loginUser = catchAsync(async (req, res) => {

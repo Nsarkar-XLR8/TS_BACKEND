@@ -1,6 +1,5 @@
 import "./observability/otel"; // Must be first
 import "./config/env";
-
 import { Server } from "node:http";
 import { createApp } from "./app.js";
 import { logger } from "./config/logger.js";

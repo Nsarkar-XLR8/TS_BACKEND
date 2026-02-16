@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import AppError from "./AppError";
+import AppError from "./AppError.js";
 
 
 export function handleJsonSyntaxError(_err: SyntaxError): AppError {

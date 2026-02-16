@@ -1,42 +1,46 @@
-import { logger } from './../config/logger';
-import pinoHttp from "pino-http";
+import { logger } from './../config/logger.js';
+import pino from "pino-http";
 import { randomUUID } from "node:crypto";
 
+const pinoHttp = (pino as any).default || pino;
 
 export const httpLogger = pinoHttp({
     logger,
 
-    genReqId: (req, res) => {
+    genReqId: (req: any, res: any) => {
         const headerId = req.headers["x-request-id"];
         const incoming = Array.isArray(headerId) ? headerId[0] : headerId;
 
         // Prefer already-attached requestId (from your requestId middleware)
-        const existing = (req as any).requestId as string | undefined;
+        const existing = req.requestId as string | undefined;
 
-        const id = (typeof incoming === "string" && incoming.length > 0)
-            ? incoming
-            : (typeof existing === "string" && existing.length > 0)
-                ? existing
-                : randomUUID();
+        let id: string;
+        if (typeof incoming === "string" && incoming.length > 0) {
+            id = incoming;
+        } else if (typeof existing === "string" && existing.length > 0) {
+            id = existing;
+        } else {
+            id = randomUUID();
+        }
 
-        (req as any).requestId = id;
+        req.requestId = id;
         res.setHeader("x-request-id", id);
         return id;
     },
 
-    customProps: (req) => ({
-        requestId: (req as any).requestId,
+    customProps: (req: any) => ({
+        requestId: req.requestId,
     }),
 
     serializers: {
-        req(req) {
+        req(req: any) {
             return {
                 method: req.method,
                 url: req.url,
-                requestId: (req as any).requestId,
+                requestId: req.requestId,
             };
         },
-        res(res) {
+        res(res: any) {
             return { statusCode: res.statusCode };
         },
     },

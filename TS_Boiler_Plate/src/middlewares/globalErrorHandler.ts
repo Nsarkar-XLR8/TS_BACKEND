@@ -1,11 +1,11 @@
 import type { ErrorRequestHandler } from "express";
 import { StatusCodes } from "http-status-codes";
 import { ZodError } from "zod";
-import { sendError } from "../utils/sendError";
-import { handleZodError } from "../errors/handleZodError";
-import { handleDuplicateKeyError } from "../errors/handleDuplicateKeyError";
-import { handleCastError } from "../errors/handleCastError";
-import AppError from "../errors/AppError";
+import { sendError } from "../utils/sendError.js";
+import { handleZodError } from "../errors/handleZodError.js";
+import { handleDuplicateKeyError } from "../errors/handleDuplicateKeyError.js";
+import { handleCastError } from "../errors/handleCastError.js";
+import AppError from "../errors/AppError.js";
 
 function isMongoDuplicateKeyError(err: unknown): boolean {
     return typeof err === "object" && err !== null && (err as any).code === 11000;

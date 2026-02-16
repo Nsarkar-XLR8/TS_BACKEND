@@ -1,5 +1,6 @@
-import { UserRole } from '../../constant/role.constant';
-import { IUserResponse } from '../user/user.interface';
+import { UserRole } from "@/constant/role.constant.js";
+import { IUserResponse } from "../user/user.interface.js";
+
 
 
 export interface IJwtPayload {

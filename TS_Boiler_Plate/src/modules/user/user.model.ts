@@ -1,8 +1,8 @@
 import { Document, Schema, model } from 'mongoose';
 import bcrypt from 'bcrypt';
-import { IUser, UserModel } from './user.interface';
-import { USER_ROLE } from '../../constant/role.constant';
-import config from '../../config';
+import { IUser, UserModel } from './user.interface.js';
+import { USER_ROLE } from '../../constant/role.constant.js';
+import config from '../../config/index.js';
 
 
 

@@ -1,6 +1,6 @@
 import multer from "multer";
 import { StatusCodes } from "http-status-codes";
-import AppError from "./AppError";
+import AppError from "./AppError.js";
 
 const multerCodeMessage: Record<string, string> = {
     LIMIT_FILE_SIZE: "File too large",

@@ -1,5 +1,5 @@
-import type { EmailRenderResult, OtpTemplatePayload } from "../types";
-import { layout, e } from "./layout";
+import type { EmailRenderResult, OtpTemplatePayload } from "../types.js";
+import { layout, e } from "./layout.js";
 
 export function renderOtpEmail(payload: OtpTemplatePayload, opts: { appName: string }): EmailRenderResult {
     const title = "Your verification code";

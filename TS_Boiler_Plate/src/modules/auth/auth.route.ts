@@ -1,8 +1,9 @@
+import { rateLimiter } from "@/middlewares/rateLimiter.js";
+import validateRequest from "@/middlewares/validateRequest.js";
 import { Router } from "express";
-import { AuthController } from "./auth.controller";
-import { AuthValidation } from "./auth.validation";
-import validateRequest from "../../middlewares/validateRequest";
-import { rateLimiter } from "../../middlewares/rateLimiter";
+import { AuthValidation } from "./auth.validation.js";
+import { AuthController } from "./auth.controller.js";
+
 
 const router = Router();
 

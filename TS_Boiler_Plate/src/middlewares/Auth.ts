@@ -2,8 +2,8 @@ import type { Request, RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import { StatusCodes } from "http-status-codes";
 
-import AppError from "../errors/AppError";
-import { isUserRole, type UserRole } from "../constant/role.constant";
+import AppError from "../errors/AppError.js";
+import { isUserRole, type UserRole } from "../constant/role.constant.js";
 
 type JwtClaims = jwt.JwtPayload & {
     userId?: string;

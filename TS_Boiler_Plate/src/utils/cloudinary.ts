@@ -1,7 +1,7 @@
 import type { UploadApiResponse, UploadApiErrorResponse, UploadApiOptions } from "cloudinary";
 import { StatusCodes } from "http-status-codes";
-import cloudinary from "../lib/cloudinary";
-import AppError from "../errors/AppError";
+import cloudinary from "../lib/cloudinary.js";
+import AppError from "../errors/AppError.js";
 
 
 export type CloudinaryUploadResult = {

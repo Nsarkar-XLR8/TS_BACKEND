@@ -1,5 +1,5 @@
-import type { EmailRenderResult, ContactThanksPayload } from "../types";
-import { layout, e } from "./layout";
+import type { EmailRenderResult, ContactThanksPayload } from "../types.js";
+import { layout, e } from "./layout.js";
 
 export function renderContactThanksEmail(
     payload: ContactThanksPayload,

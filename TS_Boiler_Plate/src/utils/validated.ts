@@ -1,6 +1,6 @@
 import type { Request } from "express";
 import { StatusCodes } from "http-status-codes";
-import AppError from "../errors/AppError";
+import AppError from "../errors/AppError.js";
 
 
 function missing(part: "body" | "query" | "params") {

@@ -6,16 +6,16 @@ import helmet from "helmet";
 import hpp from "hpp";
 import timeout from "connect-timeout";
 import swaggerUi from "swagger-ui-express";
-import { mongoSanitize } from "./middlewares/mongoSanitize";
-import router from "./routes";
-import { openapiSpec } from "./config/swagger";
-import { notFound } from "./middlewares/notFound";
-import { errorHandler } from "./middlewares/globalErrorHandler";
-import { requestId } from "./middlewares/requestId";
-import { httpLogger } from "./middlewares/httpLogger";
-import { rateLimiter } from "./middlewares/rateLimiter";
-import { securityHeaders } from "./middlewares/security";
-import { metricsHandler, metricsMiddleware } from "./observability/metrics";
+import { mongoSanitize } from "./middlewares/mongoSanitize.js";
+import router from "./routes/index.js";
+import { openapiSpec } from "./config/swagger.js";
+import { notFound } from "./middlewares/notFound.js";
+import { errorHandler } from "./middlewares/globalErrorHandler.js";
+import { requestId } from "./middlewares/requestId.js";
+import { httpLogger } from "./middlewares/httpLogger.js";
+import { rateLimiter } from "./middlewares/rateLimiter.js";
+import { securityHeaders } from "./middlewares/security.js";
+import { metricsHandler, metricsMiddleware } from "./observability/metrics.js";
 
 
 export function createApp() {

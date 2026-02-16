@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { TErrorSource, TGenericErrorResponse } from "../errors/error.types";
+import type { TErrorSource, TGenericErrorResponse } from "../errors/error.types.js";
 
 type SendErrorArgs = {
     res: Response;

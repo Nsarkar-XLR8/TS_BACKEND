@@ -1,8 +1,8 @@
 import { StatusCodes } from "http-status-codes";
-import catchAsync from "../../utils/catchAsync";
-import { sendResponse } from "../../utils/sendResponse";
-import { UserService } from "./user.service";
-import AppError from "../../errors/AppError";
+import catchAsync from "../../utils/catchAsync.js";
+import { sendResponse } from "../../utils/sendResponse.js";
+import { UserService } from "./user.service.js";
+import AppError from "../../errors/AppError.js";
 
 
 

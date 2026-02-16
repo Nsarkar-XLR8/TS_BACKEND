@@ -1,8 +1,8 @@
-import type { EmailRenderResult, TemplateName, TemplatePayloadMap } from "../types";
+import type { EmailRenderResult, TemplateName, TemplatePayloadMap } from "../types.js";
 
-import { renderOtpEmail } from "./otp";
-import { renderResendOtpEmail } from "./resendOtp";
-import { renderContactThanksEmail } from "./contactThanks";
+import { renderOtpEmail } from "./otp.js";
+import { renderResendOtpEmail } from "./resendOtp.js";
+import { renderContactThanksEmail } from "./contactThanks.js";
 
 const APP_NAME = process.env.APP_NAME ?? "TS Boilerplate";
 
@@ -23,5 +23,9 @@ export function renderTemplate<K extends TemplateName>(
     name: K,
     payload: TemplatePayloadMap[K]
 ): EmailRenderResult {
-    return renderers[name](payload, { appName: APP_NAME });
+    const renderer = renderers[name];
+    if (!renderer) {
+        throw new Error(`Template renderer not found: ${name}`);
+    }
+    return (renderer as any)(payload, { appName: APP_NAME });
 }

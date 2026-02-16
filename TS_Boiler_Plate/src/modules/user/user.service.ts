@@ -1,6 +1,6 @@
-import AppError from '../../errors/AppError';
-import { IUser } from './user.interface';
-import { User } from './user.model';
+import AppError from '../../errors/AppError.js';
+import { IUser } from './user.interface.js';
+import { User } from './user.model.js';
 import { StatusCodes } from 'http-status-codes';
 
 const getMyProfileFromDB = async (userId: string) => {

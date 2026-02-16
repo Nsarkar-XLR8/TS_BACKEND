@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { USER_ROLE } from '../../constant/role.constant';
+import { USER_ROLE } from '../../constant/role.constant.js';
 
 const updateMyProfileSchema = z.object({
     body: z.object({

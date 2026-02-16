@@ -1,5 +1,5 @@
 import ms from "ms";
-import config from "../config";
+import config from "../config/index.js";
 
 function toSeconds(input: string) {
     const value = ms(input as ms.StringValue); // ✅ cast to satisfy typings

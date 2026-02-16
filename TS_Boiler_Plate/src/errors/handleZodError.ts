@@ -1,6 +1,6 @@
 import { StatusCodes } from "http-status-codes";
 import { ZodError } from "zod";
-import AppError from "./AppError";
+import AppError from "./AppError.js";
 
 
 export function handleZodError(err: ZodError): AppError {

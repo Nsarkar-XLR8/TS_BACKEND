@@ -32,8 +32,8 @@
 
 
 import { Router } from 'express';
-import { AuthRoutes } from '../modules/auth/auth.route';
-import { UserRoutes } from '../modules/user/user.route';
+import { AuthRoutes } from '../modules/auth/auth.route.js';
+import { UserRoutes } from '../modules/user/user.route.js';
 
 const router = Router();
 

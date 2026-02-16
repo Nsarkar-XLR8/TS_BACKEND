@@ -4,7 +4,7 @@ export function pick<T extends Record<string, unknown>, K extends readonly (keyo
 ): Pick<T, K[number]> {
     const out = {} as Pick<T, K[number]>;
     for (const key of keys) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        if (Object.hasOwn(obj, key)) {
             out[key] = obj[key];
         }
     }
