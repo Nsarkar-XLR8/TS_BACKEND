@@ -1,4 +1,3 @@
-import { StatusCodes } from "http-status-codes";
 import compression from "compression";
 import express from "express";
 import cors from "cors";
@@ -66,14 +65,6 @@ export function createApp() {
 
     // 8. TELEMETRY & PUBLIC ROUTES
     app.get("/metrics", metricsHandler);
-    app.get("/", (req, res) => {
-        res.status(StatusCodes.OK).json({
-            success: true,
-            statusCode: StatusCodes.OK,
-            message: "OK",
-            requestId: req.requestId ?? null
-        });
-    });
 
     // 9. DOCUMENTATION
     const enableDocs = (process.env.SWAGGER_ENABLED ?? "true") === "true";

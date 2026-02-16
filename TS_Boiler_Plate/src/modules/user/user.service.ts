@@ -1,3 +1,4 @@
+import { buildApiQuery } from '../../utils/apiFeatures.js';
 import AppError from '../../errors/AppError.js';
 import { IUser } from './user.interface.js';
 import { User } from './user.model.js';
@@ -36,30 +37,34 @@ const updateMyProfileInDB = async (userId: string, payload: Partial<IUser>) => {
 
 
 const getAllUsersFromDB = async (query: Record<string, unknown>) => {
-    // Basic implementation of Pagination & Filtering
-    const { page = 1, limit = 10, searchTerm, ...filters } = query;
+    const { filters, search, pagination } = buildApiQuery(query, {
+        searchableFields: ['firstName', 'lastName', 'email'],
+        filterableFields: ['role', 'isVerified'],
+        defaultSortBy: 'createdAt',
+        defaultSortOrder: 'desc'
+    });
 
     const queryObj = { ...filters };
 
-    // Search logic (optional but recommended)
-    if (searchTerm) {
-        queryObj.$or = [
-            { firstName: { $regex: searchTerm, $options: 'i' } },
-            { email: { $regex: searchTerm, $options: 'i' } },
-        ];
+    if (search) {
+        queryObj.$or = search.fields.map((field) => ({
+            [field]: { $regex: search.term, $options: 'i' }
+        }));
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
-
     const result = await User.find(queryObj)
-        .sort('-createdAt')
-        .skip(skip)
-        .limit(Number(limit));
+        .sort(pagination.sort)
+        .skip(pagination.skip)
+        .limit(pagination.limit);
 
     const total = await User.countDocuments(queryObj);
 
     return {
-        meta: { page: Number(page), limit: Number(limit), total },
+        meta: {
+            page: pagination.page,
+            limit: pagination.limit,
+            total
+        },
         data: result,
     };
 };
