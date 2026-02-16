@@ -43,7 +43,26 @@ const authRateLimiter = rateLimit({
     }
 });
 
+/**
+ * Extremely strict limiter for sensitive actions like OTP verification
+ * and password resets.
+ */
+const sensitiveActionLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 10, // 10 attempts per 15 minutes
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, _res, next) => {
+        next(
+            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Security delay", [
+                { path: "security", message: "Too many sensitive attempts. Please wait 15 minutes." }
+            ])
+        );
+    }
+});
+
 export const rateLimiter = {
     apiRateLimiter,
-    authRateLimiter
+    authRateLimiter,
+    sensitiveActionLimiter
 };

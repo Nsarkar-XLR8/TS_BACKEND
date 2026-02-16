@@ -9,33 +9,35 @@ const router = Router();
 
 router.post(
     "/login",
-    rateLimiter.apiRateLimiter,
+    rateLimiter.authRateLimiter,
     validateRequest(AuthValidation.loginSchema),
     AuthController.loginUser
 );
 
 router.post(
     "/register",
-    rateLimiter.apiRateLimiter,
+    rateLimiter.authRateLimiter,
     validateRequest(AuthValidation.registerSchema),
     AuthController.registerUser
 );
 
 router.post(
     "/verify-email",
-    rateLimiter.apiRateLimiter,
+    rateLimiter.authRateLimiter,
     validateRequest(AuthValidation.verifyEmailSchema),
     AuthController.verifyEmail
 );
 
 router.post(
     '/forgot-password',
+    rateLimiter.authRateLimiter,
     validateRequest(AuthValidation.forgotPasswordSchema),
     AuthController.forgotPassword
 );
 
 router.post(
     '/verify-otp',
+    rateLimiter.sensitiveActionLimiter,
     validateRequest(AuthValidation.verifyOtpSchema),
     AuthController.verifyOtp
 );
@@ -43,6 +45,7 @@ router.post(
 
 router.patch(
     '/reset-password',
+    rateLimiter.sensitiveActionLimiter,
     validateRequest(AuthValidation.resetPasswordSchema),
     AuthController.resetPassword
 );
