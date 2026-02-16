@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import nodemailer, { type Transporter, type SendMailOptions } from "nodemailer";
 import { StatusCodes } from "http-status-codes";
 import config from "@/config/index.js";

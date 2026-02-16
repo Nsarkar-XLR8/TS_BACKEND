@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import jwt, { Secret, SignOptions, type JwtPayload } from "jsonwebtoken";
 import { StatusCodes } from "http-status-codes";
 import AppError from "../errors/AppError.js";

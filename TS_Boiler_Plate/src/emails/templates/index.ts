@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { EmailRenderResult, TemplateName, TemplatePayloadMap } from "../types.js";
 
 import { renderOtpEmail } from "./otp.js";

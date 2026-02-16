@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import multer from "multer";
 import { StatusCodes } from "http-status-codes";
 import AppError from "../errors/AppError.js";

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/observability/metrics.ts
 import type { Request, Response, NextFunction } from "express";
 import client from "prom-client";

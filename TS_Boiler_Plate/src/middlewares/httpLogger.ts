@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { logger } from './../config/logger.js';
 import pino from "pino-http";
 import { randomUUID } from "node:crypto";
