@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { StatusCodes } from 'http-status-codes';
 import jwt from 'jsonwebtoken';
 import { IUser } from '../user/user.interface.js';
