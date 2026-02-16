@@ -5,7 +5,7 @@ function toSeconds(input: string) {
     const value = ms(input as ms.StringValue); // ✅ cast to satisfy typings
 
     if (typeof value !== "number") {
-        throw new Error(`Invalid duration format: ${input}`);
+        throw new TypeError(`Invalid duration format: ${input}`);
     }
 
     return Math.floor(value / 1000);

@@ -25,8 +25,8 @@ router.patch(
 router.get(
     '/get-all-users',
     Auth(USER_ROLE.ADMIN), // STRICT: Only admins can list all users
-    UserController.getAllUsers,
-    validateRequest(UserValidation.getAllUsersQuerySchema)
+    validateRequest(UserValidation.getAllUsersQuerySchema),
+    UserController.getAllUsers
 );
 
 export const UserRoutes = router;
