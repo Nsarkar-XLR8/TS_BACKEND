@@ -13,7 +13,7 @@ import config from '@/config/index.js';
 
 const registerUser = async (payload: IUser) => {
     // 1. Check existence
-    const isUserExists = await User.findOne({ email: payload.email });
+    const isUserExists = await User.findOne({ email: payload.email }).lean();
     if (isUserExists) {
         throw AppError.of(StatusCodes.BAD_REQUEST, 'User already exists');
     }
@@ -85,7 +85,7 @@ const verifyEmail = async (email: string, otp: string) => {
 
 const loginUser = async (payload: ILoginCredentials): Promise<ILoginResponse> => {
     // 1. Check if user exists (Must explicitly select password)
-    const user = await User.findOne({ email: payload.email }).select('+password');
+    const user = await User.findOne({ email: payload.email }).select('+password').lean();
 
     if (!user) {
         throw AppError.of(StatusCodes.NOT_FOUND, 'User not found', [
@@ -147,7 +147,7 @@ const loginUser = async (payload: ILoginCredentials): Promise<ILoginResponse> =>
 
 
 const forgotPassword = async (email: string) => {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email }).lean();
 
     // Security: If user doesn't exist, don't throw error. 
     // Return early so controller can send generic success.
@@ -181,7 +181,7 @@ const verifyOtp = async (payload: { email: string; otp: string }) => {
         email: payload.email,
         otp: payload.otp,
         otpExpires: { $gt: new Date() }, // Check if current time < expiry
-    });
+    }).lean();
 
     if (!user) {
         throw AppError.of(StatusCodes.BAD_REQUEST, 'Invalid or expired OTP');

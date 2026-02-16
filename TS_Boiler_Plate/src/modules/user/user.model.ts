@@ -16,14 +16,20 @@ const userSchema = new Schema<IUser, UserModel>(
       type: String,
       enum: Object.values(USER_ROLE),
       default: USER_ROLE.USER,
+      index: true,
     },
     avatar: { type: String },
-    isVerified: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false, index: true },
     otp: { type: String, select: 0 },
     otpExpires: { type: Date, select: 0 },
   },
   { timestamps: true }
 );
+
+// [Performance] Compound index for searchable fields (firstName, lastName, email)
+// Note: email is already unique/indexed, but adding it here helps with compound queries
+userSchema.index({ firstName: 'text', lastName: 'text', email: 'text' });
+userSchema.index({ firstName: 1, lastName: 1 }); // Useful for sorting/filtering by name
 
 // [Security] Hash password before saving
 // 2. Fix the Middleware: Use "this: IUser & Document"

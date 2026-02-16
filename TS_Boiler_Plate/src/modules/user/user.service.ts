@@ -5,7 +5,7 @@ import { User } from './user.model.js';
 import { StatusCodes } from 'http-status-codes';
 
 const getMyProfileFromDB = async (userId: string) => {
-    const result = await User.findById(userId);
+    const result = await User.findById(userId).lean();
 
     if (!result) {
         throw AppError.of(StatusCodes.NOT_FOUND, 'User profile not found');
@@ -55,7 +55,8 @@ const getAllUsersFromDB = async (query: Record<string, unknown>) => {
     const result = await User.find(queryObj)
         .sort(pagination.sort)
         .skip(pagination.skip)
-        .limit(pagination.limit);
+        .limit(pagination.limit)
+        .lean();
 
     const total = await User.countDocuments(queryObj);
 
