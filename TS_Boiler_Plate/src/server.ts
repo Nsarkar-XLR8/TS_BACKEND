@@ -1,4 +1,4 @@
-import { otelSdk } from "./observability/otel.js"; // Must be first
+import { otelSdk } from "./observability/otel.js"; // This side-effect import must be ABSOLUTELY FIRST to patch modules
 import "./config/env.js";
 import { Server } from "node:http";
 import { createApp } from "./app.js";
