@@ -1,16 +1,15 @@
 import { StatusCodes } from "http-status-codes";
+import ms from "ms";
 import catchAsync from "../../utils/catchAsync.js";
 import { sendResponse } from "../../utils/sendResponse.js";
 import { AuthService } from "./auth.service.js";
 
 import AppError from "../../errors/AppError.js";
 import { getAuthTokenMeta } from "../../utils/tokenMeta.js";
+import config from "../../config/index.js";
 
 
 const loginUser = catchAsync(async (req, res) => {
-
-    // console.log('RAW BODY:', req.body);
-    // console.log('VALIDATED BODY:', req.validated?.body);
 
     const result = await AuthService.loginUser(req.validated!.body);
     const { refreshToken, accessToken, user } = result;
@@ -26,12 +25,22 @@ const loginUser = catchAsync(async (req, res) => {
 
     const meta = getAuthTokenMeta();
 
+    // Set refresh token as httpOnly cookie
+    const refreshMaxAge = ms(config.jwt.refreshExpiresIn as ms.StringValue);
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: config.nodeEnv === "production",
+        sameSite: config.nodeEnv === "production" ? "strict" : "lax",
+        maxAge: typeof refreshMaxAge === "number" ? refreshMaxAge : 30 * 24 * 60 * 60 * 1000,
+        path: "/",
+    });
+
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         message: "User logged in successfully",
         data: {
             accessToken,
-            refreshToken, // you said you need it in JSON
+            refreshToken, // Also in JSON for mobile/non-cookie clients
             ...meta,
             user: safeUser,
         },
@@ -141,6 +150,74 @@ const resetPassword = catchAsync(async (req, res) => {
 });
 
 
+// ── New: Refresh Token ───────────────────────────────────────────────
+
+const refreshToken = catchAsync(async (req, res) => {
+    // Accept refresh token from httpOnly cookie OR request body
+    const token =
+        (req.cookies as Record<string, string> | undefined)?.refreshToken ??
+        req.validated?.body?.refreshToken;
+
+    if (!token) {
+        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Refresh token is required', [
+            { path: 'refreshToken', message: 'Provide refresh token in cookie or body' }
+        ]);
+    }
+
+    const result = await AuthService.refreshAccessToken(token);
+    const meta = getAuthTokenMeta();
+
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        message: 'Token refreshed successfully',
+        data: {
+            accessToken: result.accessToken,
+            ...meta,
+        },
+    });
+});
+
+
+// ── New: Logout ──────────────────────────────────────────────────────
+
+const logoutUser = catchAsync(async (req, res) => {
+    const userId = (req.user as any)!.userId;
+    const token =
+        (req.cookies as Record<string, string> | undefined)?.refreshToken ??
+        req.body?.refreshToken;
+
+    await AuthService.logoutUser(userId, token);
+
+    // Clear the refresh token cookie
+    res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: config.nodeEnv === "production",
+        sameSite: config.nodeEnv === "production" ? "strict" : "lax",
+        path: "/",
+    });
+
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        message: 'Logged out successfully',
+        data: null,
+    });
+});
+
+
+// ── New: Resend OTP ──────────────────────────────────────────────────
+
+const resendOtp = catchAsync(async (req, res) => {
+    const { email } = req.validated!.body;
+    const result = await AuthService.resendOtp(email);
+
+    sendResponse(res, {
+        statusCode: StatusCodes.OK,
+        message: result.message,
+        data: null,
+    });
+});
+
+
 
 export const AuthController = {
     loginUser,
@@ -148,5 +225,8 @@ export const AuthController = {
     verifyEmail,
     forgotPassword,
     verifyOtp,
-    resetPassword
+    resetPassword,
+    refreshToken,
+    logoutUser,
+    resendOtp
 };

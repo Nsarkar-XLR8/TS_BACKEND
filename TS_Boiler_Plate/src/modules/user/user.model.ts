@@ -47,9 +47,8 @@ userSchema.pre('save', async function (this: IUser & Document) {
   // No need to call next() in async pre-save hooks
 });
 
-userSchema.statics.isPasswordMatch = async function (plainText, hashed) {
-  return await bcrypt.compare(plainText, hashed);
-};
+
+
 
 // [Security] Static method for credential verification
 userSchema.statics.isPasswordMatch = async function (

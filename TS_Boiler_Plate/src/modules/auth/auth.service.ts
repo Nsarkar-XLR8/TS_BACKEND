@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import crypto from "node:crypto";
 import { StatusCodes } from 'http-status-codes';
 import jwt from 'jsonwebtoken';
 import { IUser } from '../user/user.interface.js';
@@ -8,6 +9,7 @@ import { sendEmail } from '@/utils/sendEmail.js';
 import { ILoginCredentials, ILoginResponse } from './auth.interface.js';
 import { createToken } from '@/utils/jwt.js';
 import config from '@/config/index.js';
+import { blacklistToken, isTokenBlacklisted } from '@/lib/redis.js';
 
 
 
@@ -19,8 +21,8 @@ const registerUser = async (payload: IUser) => {
         throw AppError.of(StatusCodes.BAD_REQUEST, 'User already exists');
     }
 
-    // 2. Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // 2. Generate cryptographically secure OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     // 3. Create User
@@ -120,7 +122,7 @@ const loginUser = async (payload: ILoginCredentials): Promise<ILoginResponse> =>
     // 5. Generate Tokens
     const accessToken = createToken(
         jwtPayload,
-        config.jwt.jwtAccesSecret,
+        config.jwt.jwtAccessSecret,
         config.jwt.jwtExpiresIn
     );
 
@@ -154,8 +156,8 @@ const forgotPassword = async (email: string) => {
     // Return early so controller can send generic success.
     if (!user) return;
 
-    // 1. Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // 1. Generate cryptographically secure OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
     // 2. Update User Record
@@ -189,10 +191,9 @@ const verifyOtp = async (payload: { email: string; otp: string }) => {
     }
 
     // 2. Generate a short-lived Reset Token (15 mins)
-    // Elite Tip: Use a specific secret for reset tokens to prevent misuse
     const resetToken = jwt.sign(
         { email: user.email, role: user.role, type: 'password_reset' },
-        config.jwt.jwtAccesSecret,
+        config.jwt.jwtAccessSecret,
         { expiresIn: '15m' }
     );
 
@@ -204,8 +205,7 @@ const verifyOtp = async (payload: { email: string; otp: string }) => {
 const resetPassword = async (token: string, newPassword: string) => {
     let decoded;
     try {
-        // Ensure you are using the correct secret from your config
-        decoded = jwt.verify(token, config.jwt.jwtAccesSecret) as any;
+        decoded = jwt.verify(token, config.jwt.jwtAccessSecret) as any;
     } catch {
         throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid or expired reset token');
     }
@@ -225,11 +225,111 @@ const resetPassword = async (token: string, newPassword: string) => {
     await user.save(); // Must use .save() to trigger hashing middleware
 };
 
+
+// ── New: Refresh Access Token ────────────────────────────────────────
+
+const refreshAccessToken = async (refreshToken: string) => {
+    let decoded;
+    try {
+        decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as any;
+    } catch {
+        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid or expired refresh token', [
+            { path: 'refreshToken', message: 'Please login again' }
+        ]);
+    }
+
+    const { userId, email, role } = decoded;
+    if (!userId || !email) {
+        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Malformed refresh token');
+    }
+
+    // Check if token has been blacklisted (logout)
+    const blacklisted = await isTokenBlacklisted(`refresh:${userId}:${decoded.iat}`);
+    if (blacklisted) {
+        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Token has been revoked', [
+            { path: 'refreshToken', message: 'This refresh token has been revoked. Please login again.' }
+        ]);
+    }
+
+    // Verify user still exists
+    const user = await User.findById(userId).lean();
+    if (!user) {
+        throw AppError.of(StatusCodes.NOT_FOUND, 'User no longer exists');
+    }
+
+    // Issue new access token
+    const newAccessToken = createToken(
+        { userId, email, role },
+        config.jwt.jwtAccessSecret,
+        config.jwt.jwtExpiresIn
+    );
+
+    return { accessToken: newAccessToken };
+};
+
+
+// ── New: Logout (Blacklist refresh token) ────────────────────────────
+
+const logoutUser = async (userId: string, refreshToken?: string) => {
+    if (refreshToken) {
+        try {
+            const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as any;
+            const ttl = decoded.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 0;
+            if (ttl > 0) {
+                await blacklistToken(`refresh:${userId}:${decoded.iat}`, ttl);
+            }
+        } catch {
+            // Token already expired or invalid — nothing to blacklist
+        }
+    }
+    return { message: 'Logged out successfully' };
+};
+
+
+// ── New: Resend OTP ──────────────────────────────────────────────────
+
+const resendOtp = async (email: string) => {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        throw AppError.of(StatusCodes.NOT_FOUND, 'User not found');
+    }
+
+    if (user.isVerified) {
+        throw AppError.of(StatusCodes.BAD_REQUEST, 'Email is already verified');
+    }
+
+    // Generate new cryptographically secure OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.otp = otp;
+    user.otpExpires = otpExpires;
+    await user.save();
+
+    const emailResult = await sendEmail({
+        to: user.email,
+        subject: 'Verify Your Email - New OTP',
+        html: `<h1>Your new OTP is: ${otp}</h1><p>Expires in 10 minutes.</p>`,
+    });
+
+    if (!emailResult.success) {
+        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to send OTP email');
+    }
+
+    return { message: 'OTP resent successfully' };
+};
+
 export const AuthService = {
     registerUser,
     verifyEmail,
     loginUser,
     forgotPassword,
     verifyOtp,
-    resetPassword
+    resetPassword,
+    refreshAccessToken,
+    logoutUser,
+    resendOtp
 };
+
+

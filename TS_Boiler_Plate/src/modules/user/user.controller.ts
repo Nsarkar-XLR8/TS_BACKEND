@@ -9,7 +9,7 @@ import AppError from "../../errors/AppError.js";
 const getMyProfile = catchAsync(async (req, res) => {
     // 1. Extract the ID based on your ACTUAL token structure
     // Since your error says the type has 'userId', use that.
-    const { userId } = req.user || {};
+    const { userId } = (req.user as any) || {};
 
     if (!userId) {
         throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid token payload: User ID missing');
@@ -28,7 +28,7 @@ const getMyProfile = catchAsync(async (req, res) => {
 const updateMyProfile = catchAsync(async (req, res) => {
     // 1. Extract the ID based on your ACTUAL token structure
     // Since your error says the type has 'userId', use that.
-    const { userId } = req.user || {};
+    const { userId } = (req.user as any) || {};
 
     if (!userId) {
         throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid token payload: User ID missing');

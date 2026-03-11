@@ -3,10 +3,13 @@
 import { Router } from 'express';
 import { AuthRoutes } from '../modules/auth/auth.route.js';
 import { UserRoutes } from '../modules/user/user.route.js';
-import { healthRouter } from './health.route.js';
 import { rootRouter } from './root.routes.js';
+import { healthRouter } from './health.route.js';
 
 const router = Router();
+
+import { passportRouter } from '../auth/passport.route.js';
+import { stripeWebhookRouter } from '../payments/stripe.route.js';
 
 const moduleRoutes = [
     {
@@ -22,8 +25,18 @@ const moduleRoutes = [
         route: AuthRoutes,
     },
     {
+        // Passport auth routes
+        path: '/auth',
+        route: passportRouter,
+    },
+    {
         path: '/user',
         route: UserRoutes
+    },
+    {
+        // Stripe webhook route needs raw body parser
+        path: '/webhooks',
+        route: stripeWebhookRouter
     }
 ];
 

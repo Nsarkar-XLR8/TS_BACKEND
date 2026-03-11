@@ -3,6 +3,7 @@ import validateRequest from "@/middlewares/validateRequest.js";
 import { Router } from "express";
 import { AuthValidation } from "./auth.validation.js";
 import { AuthController } from "./auth.controller.js";
+import { Auth } from "@/middlewares/Auth.js";
 
 
 const router = Router();
@@ -48,6 +49,28 @@ router.patch(
     rateLimiter.sensitiveActionLimiter,
     validateRequest(AuthValidation.resetPasswordSchema),
     AuthController.resetPassword
+);
+
+// ── New Routes ───────────────────────────────────────────────────────
+
+router.post(
+    '/refresh-token',
+    rateLimiter.authRateLimiter,
+    validateRequest(AuthValidation.refreshTokenSchema),
+    AuthController.refreshToken
+);
+
+router.post(
+    '/logout',
+    Auth(),
+    AuthController.logoutUser
+);
+
+router.post(
+    '/resend-otp',
+    rateLimiter.sensitiveActionLimiter,
+    validateRequest(AuthValidation.resendOtpSchema),
+    AuthController.resendOtp
 );
 
 export const AuthRoutes = router;

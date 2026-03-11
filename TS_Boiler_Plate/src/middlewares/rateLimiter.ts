@@ -75,7 +75,7 @@ const authenticatedUserLimiter = rateLimit({
     validate: { default: false }, // Disable internal IP validation for custom key generator
     keyGenerator: (req) => {
         // Fallback to IP if userId isn't available (e.g. middleware misplacement)
-        return req.user?.userId || req.ip || "unknown";
+        return (req.user as any)?.userId || req.ip || "unknown";
     },
     handler: (_req, _res, next) => {
         next(

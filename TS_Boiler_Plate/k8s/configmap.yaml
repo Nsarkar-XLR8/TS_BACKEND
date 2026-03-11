@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: ts-boilerplate
+data:
+  NODE_ENV: "production"
+  PORT: "5000"
+  TRUST_PROXY: "true"
+  SWAGGER_ENABLED: "false"
+  CORS_ORIGIN: "https://your-frontend.com"
+  OTEL_SERVICE_NAME: "ts-boilerplate-api"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318/v1/traces"

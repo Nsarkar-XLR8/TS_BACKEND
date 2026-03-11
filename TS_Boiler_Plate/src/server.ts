@@ -3,11 +3,21 @@ import "./config/env.js";
 import { Server } from "node:http";
 import { createApp } from "./app.js";
 import { logger } from "./config/logger.js";
-import { connectDB, disconnectDB } from "./config/connectDB.js";
+import { connectDB, disconnectDB } from "./database/index.js";
 import config from "./config/index.js";
+import { connectRedis, disconnectRedis } from "./lib/redis.js";
+
+import { connectKafka, disconnectKafka } from "./queues/kafka.js";
+import { connectRabbitMQ, disconnectRabbitMQ } from "./queues/rabbitmq.js";
+import { startJobs, stopJobs } from "./jobs/index.js";
+import { cleanExpiredOtpJob } from "./jobs/examples/cleanExpiredOtp.js";
+import { initPassport } from "./auth/passport.js";
 
 
 const app = createApp();
+
+// Init passport strategies
+initPassport();
 
 /**
  * Handles fatal errors that occur outside the Express context.
@@ -26,6 +36,9 @@ let server: Server;
 const shutdown = (signal: string) => {
     logger.info(`[${signal}] - Initiating clean exit.`);
 
+    // Stop cron jobs
+    stopJobs();
+
     // 1. Close idle connections to release the port immediately
     if (server) {
         if (server.closeAllConnections) server.closeAllConnections();
@@ -38,7 +51,10 @@ const shutdown = (signal: string) => {
             }
 
             try {
-                // 3. Disconnect DB
+                // 3. Disconnect Queues and DBs
+                await disconnectKafka();
+                await disconnectRabbitMQ();
+                await disconnectRedis();
                 await disconnectDB();
 
                 // 4. Shutdown OTEL
@@ -68,9 +84,15 @@ process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
 
-
 try {
-    await connectDB(config.mongodbUrl);
+    await connectDB();
+    await connectRedis(config.redis.url);
+    await connectRabbitMQ(config.queues.rabbitmqUrl);
+    await connectKafka(config.queues.kafkaBrokers);
+    
+    // Start Cron Jobs after DB is ready
+    startJobs([cleanExpiredOtpJob]);
+
     server = app.listen(config.port, () => {
         logger.info({ port: config.port, env: config.nodeEnv }, "🚀 Server Synchronized");
     });
@@ -78,4 +100,5 @@ try {
     logger.error({ err }, "Bootstrap sequence failed");
     process.exit(1);
 }
+
 

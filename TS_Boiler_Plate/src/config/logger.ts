@@ -21,7 +21,23 @@ export const logger = pino({
         err: pino.stdSerializers.err,
     },
     ...(isProd
-        ? {}
+        ? {
+            // In production, log to Loki if configured
+            transport: process.env.LOKI_URL
+                ? {
+                    target: "pino-loki",
+                    options: {
+                        batching: true,
+                        interval: 5,
+                        host: process.env.LOKI_URL,
+                        labels: {
+                            application: process.env.OTEL_SERVICE_NAME || "ts-boilerplate",
+                            environment: process.env.NODE_ENV,
+                        },
+                    },
+                } as any
+                : undefined,
+        }
         : {
             transport: {
                 target: "pino-pretty",

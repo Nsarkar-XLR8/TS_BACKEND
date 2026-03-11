@@ -8,7 +8,10 @@ const envSchema = z.object({
     PORT: z.coerce.number().default(3000),
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 
-    MONGODB_URL: z.string().min(1),
+    DB_TYPE: z.enum(["mongodb", "postgres", "mysql"]).default("mongodb"),
+    MONGODB_URL: z.string().optional(),
+    POSTGRES_URL: z.string().optional(),
+    MYSQL_URL: z.string().optional(),
 
     BCRYPT_SALT_ROUNDS: z.coerce.number().default(10),
 
@@ -39,7 +42,27 @@ const envSchema = z.object({
     STRIPE_WEBHOOK_ADMIN_URL: z.string().optional(),
 
     STRIPE_ONBOARDING_SECRET_KEY: z.string().optional(),
-    STRIPE_ONBOARDING_WEBHOOK_URL: z.string().optional()
+    STRIPE_ONBOARDING_WEBHOOK_URL: z.string().optional(),
+
+    // ── New: Redis, CORS, Proxy, Swagger ──
+    REDIS_URL: z.string().optional(),
+    CORS_ORIGIN: z.string().default("http://localhost:3000"),
+    TRUST_PROXY: z.enum(["true", "false"]).default("false"),
+    SWAGGER_ENABLED: z.enum(["true", "false"]).default("true"),
+
+    // ── Advanced Scalability ──
+    RABBITMQ_URL: z.string().optional(),
+    KAFKA_BROKERS: z.string().optional(),
+    LOKI_URL: z.string().optional(),
+
+    // ── OAuth ──
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    GOOGLE_CALLBACK_URL: z.string().optional(),
+
+    GITHUB_CLIENT_ID: z.string().optional(),
+    GITHUB_CLIENT_SECRET: z.string().optional(),
+    GITHUB_CALLBACK_URL: z.string().optional()
 });
 
 const env = envSchema.parse(process.env);
@@ -48,14 +71,17 @@ const config = {
     port: env.PORT,
     nodeEnv: env.NODE_ENV,
 
+    dbType: env.DB_TYPE,
     mongodbUrl: env.MONGODB_URL,
+    postgresUrl: env.POSTGRES_URL,
+    mysqlUrl: env.MYSQL_URL,
 
     bcryptSaltRounds: env.BCRYPT_SALT_ROUNDS,
 
     jwt: {
         secret: env.JWT_SECRET,
         expiresIn: env.JWT_EXPIRES_IN,
-        jwtAccesSecret: env.JWT_SECRET,
+        jwtAccessSecret: env.JWT_SECRET,
         jwtExpiresIn: env.JWT_EXPIRES_IN,
         refreshSecret: env.JWT_REFRESH_TOKEN_SECRET,
         refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN
@@ -97,9 +123,34 @@ const config = {
     },
 
     logger: {
-        level: env.NODE_ENV === "production" ? "info" : "debug"
+        level: env.NODE_ENV === "production" ? "info" : "debug",
+        lokiUrl: env.LOKI_URL
     },
-     swagger_enabled: true,
+
+    redis: {
+        url: env.REDIS_URL,
+    },
+
+    queues: {
+        rabbitmqUrl: env.RABBITMQ_URL,
+        kafkaBrokers: env.KAFKA_BROKERS
+    },
+
+    oauth: {
+        googleClientId: env.GOOGLE_CLIENT_ID,
+        googleClientSecret: env.GOOGLE_CLIENT_SECRET,
+        googleCallbackUrl: env.GOOGLE_CALLBACK_URL,
+        githubClientId: env.GITHUB_CLIENT_ID,
+        githubClientSecret: env.GITHUB_CLIENT_SECRET,
+        githubCallbackUrl: env.GITHUB_CALLBACK_URL
+    },
+
+    cors: {
+        origin: env.CORS_ORIGIN,
+    },
+
+    trustProxy: env.TRUST_PROXY === "true",
+    swaggerEnabled: env.SWAGGER_ENABLED === "true",
 };
 
 export default config;

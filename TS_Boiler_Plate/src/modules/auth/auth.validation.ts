@@ -50,6 +50,12 @@ const resetPasswordSchema = z.object({
     }).strict(),
 });
 
+const refreshTokenSchema = z.object({
+    body: z.object({
+        refreshToken: z.string().min(1, "Refresh token is required"),
+    }).strict(),
+});
+
 export const AuthValidation = {
     registerSchema,
     loginSchema,
@@ -57,5 +63,6 @@ export const AuthValidation = {
     forgotPasswordSchema,
     resendOtpSchema,
     verifyOtpSchema,
-    resetPasswordSchema
+    resetPasswordSchema,
+    refreshTokenSchema
 };

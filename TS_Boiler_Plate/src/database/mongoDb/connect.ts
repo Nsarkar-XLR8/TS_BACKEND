@@ -1,8 +1,5 @@
 import mongoose from "mongoose";
-import { logger } from "./logger.js";
-
-
-
+import { logger } from "../../config/logger.js";
 
 export async function connectDB(uri: string) {
     try {

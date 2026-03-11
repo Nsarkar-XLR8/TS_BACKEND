@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { isDbReady } from "../config/connectDB.js";
+import { isDbReady } from "../database/index.js";
+import { isRedisReady } from "../lib/redis.js";
+import { isRabbitReady } from "../queues/rabbitmq.js";
+import { isKafkaReady } from "../queues/kafka.js";
 
 export const healthRouter = Router();
 
@@ -27,11 +30,23 @@ healthRouter.get("/health", (_req, res) => {
 });
 
 healthRouter.get("/ready", (_req, res) => {
-    const ready = isDbReady();
+    const dbReady = isDbReady();
+    const redisStatus = isRedisReady();
+    const rabbitMQStatus = isRabbitReady();
+    const kafkaStatus = isKafkaReady();
+    
+    // DB is the only hard requirement for readiness. All other queues degrade gracefully.
+    const ready = dbReady;
+
     res.status(ready ? 200 : 503).json({
         success: ready,
         statusCode: ready ? 200 : 503,
         message: ready ? "READY" : "NOT_READY",
-        data: { db: ready }
+        data: { 
+            db: dbReady, 
+            redis: redisStatus,
+            rabbitmq: rabbitMQStatus,
+            kafka: kafkaStatus
+        }
     });
 });

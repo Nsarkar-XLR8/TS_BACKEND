@@ -1,4 +1,5 @@
 import compression from "compression";
+import cookieParser from "cookie-parser";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -15,15 +16,15 @@ import { httpLogger } from "./middlewares/httpLogger.js";
 import { rateLimiter } from "./middlewares/rateLimiter.js";
 import { securityHeaders } from "./middlewares/security.js";
 import { metricsHandler, metricsMiddleware } from "./observability/metrics.js";
+import config from "./config/index.js";
 
 
 export function createApp() {
     const app = express();
-    const trustProxy = process.env.TRUST_PROXY === 'true';
 
     // 1. SYSTEM SETTINGS
     app.disable("x-powered-by");
-    app.set('trust proxy', trustProxy);
+    app.set('trust proxy', config.trustProxy);
 
     // 2. OBSERVABILITY & IDENTIFICATION (MOVED FROM 6 TO TOP)
     app.use(requestId);
@@ -47,7 +48,11 @@ export function createApp() {
 
     // 4. SECURITY & TRAFFIC CONTROL
     app.use(helmet());
-    app.use(cors({ origin: true, credentials: true, exposedHeaders: ["x-request-id"] }));
+    app.use(cors({
+        origin: config.cors.origin.split(",").map(s => s.trim()),
+        credentials: true,
+        exposedHeaders: ["x-request-id"]
+    }));
     app.use(hpp());
     app.use(securityHeaders);
     app.use("/api", rateLimiter.apiRateLimiter); // Protects the parsers below
@@ -59,6 +64,7 @@ export function createApp() {
     // 6. REQUEST PARSERS
     app.use(express.json({ limit: "50kb" }));
     app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+    app.use(cookieParser());
 
     // 7. DATA SANITIZATION
     app.use(mongoSanitize);
@@ -67,9 +73,7 @@ export function createApp() {
     app.get("/metrics", metricsHandler);
 
     // 9. DOCUMENTATION
-    const enableDocs = (process.env.SWAGGER_ENABLED ?? "true") === "true";
-    const isProd = (process.env.NODE_ENV ?? "development") === "production";
-    if (enableDocs && !isProd) {
+    if (config.swaggerEnabled && config.nodeEnv !== "production") {
         app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openapiSpec));
         app.get("/api-docs.json", (_req, res) => res.json(openapiSpec));
     }
@@ -83,3 +87,4 @@ export function createApp() {
 
     return app;
 }
+
