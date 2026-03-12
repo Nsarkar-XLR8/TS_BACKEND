@@ -1,6 +1,6 @@
 <br />
 <div align="center">
-  <img src="https://media.giphy.com/media/LmNwrBhejkK9EFP504/giphy.gif" alt="Modern Developer Animation" width="200" height="200"/>
+  <img src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNG52eG5nZGNuYmg5bzRjMHRhdWRoN2M2b2J3YjRyanUwZGQwdzI1byZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1X7Al9gXX8gXd3HdSF/giphy.gif" alt="Modern Developer Animation" width="200" height="200"/>
 </div>
 
 <h1 align="center">🚀 Ultimate TypeScript Express Boilerplate</h1>
