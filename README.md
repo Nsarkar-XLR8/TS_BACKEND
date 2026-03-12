@@ -1,6 +1,6 @@
 <br />
 <div align="center">
-  <img src="https://raw.githubusercontent.com/abhisheknaiidu/abhisheknaiidu/master/code.gif" alt="Coding Animation" width="100%" height="200"/>
+  <img src="https://raw.githubusercontent.com/7heSamurai/7heSamurai/main/assets/Animation.gif" alt="Coding Banner Animation" width="100%" height="200"/>
 </div>
 
 <h1 align="center">🚀 Ultimate TypeScript Express Boilerplate</h1>
