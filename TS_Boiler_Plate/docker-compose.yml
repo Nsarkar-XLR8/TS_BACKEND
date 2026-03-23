@@ -27,6 +27,89 @@ services:
       - /app/node_modules
     command: npm run dev
 
+  worker-bullmq:
+    build: .
+    environment:
+      - NODE_ENV=development
+      - DB_TYPE=mongodb
+      - MONGODB_URL=mongodb://mongo:27017/ts_boilerplate
+      - JWT_SECRET=dev_secret_change_me_in_production_min_32_chars
+      - JWT_EXPIRES_IN=7d
+      - JWT_REFRESH_TOKEN_SECRET=dev_refresh_secret_change_me_too
+      - JWT_REFRESH_EXPIRES_IN=30d
+      - CLOUDINARY_CLOUD_NAME=your_cloud_name
+      - CLOUDINARY_API_KEY=your_api_key
+      - CLOUDINARY_API_SECRET=your_api_secret
+      - REDIS_URL=redis://redis:6379
+      - BULLMQ_ENABLED=true
+      - KAFKA_ENABLED=true
+      - RABBITMQ_ENABLED=true
+      - KAFKA_BROKERS=kafka:29092
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run worker:bullmq
+
+  worker-kafka:
+    build: .
+    environment:
+      - NODE_ENV=development
+      - DB_TYPE=mongodb
+      - MONGODB_URL=mongodb://mongo:27017/ts_boilerplate
+      - JWT_SECRET=dev_secret_change_me_in_production_min_32_chars
+      - JWT_EXPIRES_IN=7d
+      - JWT_REFRESH_TOKEN_SECRET=dev_refresh_secret_change_me_too
+      - JWT_REFRESH_EXPIRES_IN=30d
+      - CLOUDINARY_CLOUD_NAME=your_cloud_name
+      - CLOUDINARY_API_KEY=your_api_key
+      - CLOUDINARY_API_SECRET=your_api_secret
+      - REDIS_URL=redis://redis:6379
+      - BULLMQ_ENABLED=true
+      - KAFKA_ENABLED=true
+      - RABBITMQ_ENABLED=true
+      - KAFKA_BROKERS=kafka:29092
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      - mongo
+      - redis
+      - kafka
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run worker:kafka
+
+  worker-rabbitmq:
+    build: .
+    environment:
+      - NODE_ENV=development
+      - DB_TYPE=mongodb
+      - MONGODB_URL=mongodb://mongo:27017/ts_boilerplate
+      - JWT_SECRET=dev_secret_change_me_in_production_min_32_chars
+      - JWT_EXPIRES_IN=7d
+      - JWT_REFRESH_TOKEN_SECRET=dev_refresh_secret_change_me_too
+      - JWT_REFRESH_EXPIRES_IN=30d
+      - CLOUDINARY_CLOUD_NAME=your_cloud_name
+      - CLOUDINARY_API_KEY=your_api_key
+      - CLOUDINARY_API_SECRET=your_api_secret
+      - REDIS_URL=redis://redis:6379
+      - BULLMQ_ENABLED=true
+      - KAFKA_ENABLED=true
+      - RABBITMQ_ENABLED=true
+      - KAFKA_BROKERS=kafka:29092
+      - RABBITMQ_URL=amqp://rabbitmq:5672
+    depends_on:
+      - mongo
+      - redis
+      - rabbitmq
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run worker:rabbitmq
+
   mongo:
     image: mongo:6
     ports:

@@ -5,6 +5,7 @@ import { AuthRoutes } from '../modules/auth/auth.route.js';
 import { UserRoutes } from '../modules/user/user.route.js';
 import { rootRouter } from './root.routes.js';
 import { healthRouter } from './health.route.js';
+import { systemRouter } from './system.route.js';
 
 const router = Router();
 
@@ -19,6 +20,10 @@ const moduleRoutes = [
     {
         path: '/',
         route: healthRouter,
+    },
+    {
+        path: '/system',
+        route: systemRouter,
     },
     {
         path: '/auth',

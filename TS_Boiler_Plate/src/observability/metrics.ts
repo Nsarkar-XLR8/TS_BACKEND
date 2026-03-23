@@ -40,6 +40,21 @@ export const httpRequestsInFlight = new client.Gauge({
     labelNames: ["method", "route"] as const,
 });
 
+export const messageBusPublishTotal = new client.Counter({
+    name: "message_bus_publish_total",
+    help: "Total number of message bus publish attempts",
+    registers: [register],
+    labelNames: ["transport", "topic", "status"] as const,
+});
+
+export const messageBusProcessingDurationSeconds = new client.Histogram({
+    name: "message_bus_processing_duration_seconds",
+    help: "Duration of processing message bus deliveries",
+    registers: [register],
+    labelNames: ["transport", "topic"] as const,
+    buckets: [0.005, 0.01, 0.05, 0.1, 0.3, 0.5, 1, 2, 5, 10],
+});
+
 /**
  * IMPORTANT: keep labels LOW cardinality.
  * DO NOT use req.originalUrl or userId as labels.
@@ -83,4 +98,19 @@ export function metricsMiddleware(req: Request, res: Response, next: NextFunctio
 export async function metricsHandler(_req: Request, res: Response) {
     res.setHeader("Content-Type", register.contentType);
     res.end(await register.metrics());
+}
+
+export function observeBusPublish(transport: string, topic: string, success: boolean) {
+    messageBusPublishTotal.inc({
+        transport,
+        topic,
+        status: success ? "success" : "failure",
+    });
+}
+
+export function observeBusProcessing(transport: string, topic: string) {
+    return messageBusProcessingDurationSeconds.startTimer({
+        transport,
+        topic,
+    });
 }

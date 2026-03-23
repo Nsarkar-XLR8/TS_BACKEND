@@ -62,7 +62,13 @@ const envSchema = z.object({
 
     GITHUB_CLIENT_ID: z.string().optional(),
     GITHUB_CLIENT_SECRET: z.string().optional(),
-    GITHUB_CALLBACK_URL: z.string().optional()
+    GITHUB_CALLBACK_URL: z.string().optional(),
+
+    // Feature Flags
+    BULLMQ_ENABLED: z.enum(["true", "false"]).default("true"),
+    KAFKA_ENABLED: z.enum(["true", "false"]).default("true"),
+    RABBITMQ_ENABLED: z.enum(["true", "false"]).default("true"),
+    STRIPE_ENABLED: z.enum(["true", "false"]).default("false")
 });
 
 const env = envSchema.parse(process.env);
@@ -151,6 +157,35 @@ const config = {
 
     trustProxy: env.TRUST_PROXY === "true",
     swaggerEnabled: env.SWAGGER_ENABLED === "true",
+    features: {
+        bullmqEnabled: env.BULLMQ_ENABLED === "true",
+        kafkaEnabled: env.KAFKA_ENABLED === "true",
+        rabbitmqEnabled: env.RABBITMQ_ENABLED === "true",
+        stripeEnabled: env.STRIPE_ENABLED === "true"
+    }
 };
+
+function assertRequiredWhenEnabled() {
+    if (config.dbType === "mongodb" && !config.mongodbUrl) {
+        throw new Error("MONGODB_URL is required when DB_TYPE=mongodb");
+    }
+    if (config.dbType === "postgres" && !config.postgresUrl) {
+        throw new Error("POSTGRES_URL is required when DB_TYPE=postgres");
+    }
+    if (config.dbType === "mysql" && !config.mysqlUrl) {
+        throw new Error("MYSQL_URL is required when DB_TYPE=mysql");
+    }
+
+    if (config.features.stripeEnabled) {
+        if (!config.stripe.stripeSecretKey) {
+            throw new Error("STRIPE_SECRET_KEY is required when STRIPE_ENABLED=true");
+        }
+        if (!config.stripe.stripeAdminWebhookSecret) {
+            throw new Error("STRIPE_WEBHOOK_ADMIN_SECRET is required when STRIPE_ENABLED=true");
+        }
+    }
+}
+
+assertRequiredWhenEnabled();
 
 export default config;

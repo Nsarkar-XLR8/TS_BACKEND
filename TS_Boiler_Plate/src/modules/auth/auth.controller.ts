@@ -167,11 +167,21 @@ const refreshToken = catchAsync(async (req, res) => {
     const result = await AuthService.refreshAccessToken(token);
     const meta = getAuthTokenMeta();
 
+    const refreshMaxAge = ms(config.jwt.refreshExpiresIn as ms.StringValue);
+    res.cookie("refreshToken", result.refreshToken, {
+        httpOnly: true,
+        secure: config.nodeEnv === "production",
+        sameSite: config.nodeEnv === "production" ? "strict" : "lax",
+        maxAge: typeof refreshMaxAge === "number" ? refreshMaxAge : 30 * 24 * 60 * 60 * 1000,
+        path: "/",
+    });
+
     sendResponse(res, {
         statusCode: StatusCodes.OK,
         message: 'Token refreshed successfully',
         data: {
             accessToken: result.accessToken,
+            refreshToken: result.refreshToken,
             ...meta,
         },
     });

@@ -3,6 +3,7 @@ import { isDbReady } from "../database/index.js";
 import { isRedisReady } from "../lib/redis.js";
 import { isRabbitReady } from "../queues/rabbitmq.js";
 import { isKafkaReady } from "../queues/kafka.js";
+import { isBullMQReady } from "../queues/bullmq.js";
 
 export const healthRouter = Router();
 
@@ -34,6 +35,7 @@ healthRouter.get("/ready", (_req, res) => {
     const redisStatus = isRedisReady();
     const rabbitMQStatus = isRabbitReady();
     const kafkaStatus = isKafkaReady();
+    const bullmqStatus = isBullMQReady();
     
     // DB is the only hard requirement for readiness. All other queues degrade gracefully.
     const ready = dbReady;
@@ -46,7 +48,8 @@ healthRouter.get("/ready", (_req, res) => {
             db: dbReady, 
             redis: redisStatus,
             rabbitmq: rabbitMQStatus,
-            kafka: kafkaStatus
+            kafka: kafkaStatus,
+            bullmq: bullmqStatus
         }
     });
 });

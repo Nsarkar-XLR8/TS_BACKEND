@@ -1,16 +1,15 @@
 import type { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import { getStripe } from "./stripe.js";
+import type Stripe from "stripe";
 import config from "../config/index.js";
 import { logger } from "../config/logger.js";
-import type Stripe from "stripe";
+import { setIfNotExists } from "../lib/redis.js";
+import { getStripe } from "./stripe.js";
+import { dispatchStripeEvent } from "./stripe.handlers.js";
 
 /**
  * Stripe webhook handler.
- * Verifies the signature and dispatches events.
- *
- * IMPORTANT: This route MUST use express.raw() — not express.json().
- * It is mounted separately in stripe.route.ts.
+ * Verifies signature, enforces idempotency, then dispatches to handlers.
  */
 export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
     const stripe = getStripe();
@@ -28,7 +27,6 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
     }
 
     let event: Stripe.Event;
-
     try {
         event = stripe.webhooks.constructEvent(req.body as Buffer, sig, webhookSecret);
     } catch (err) {
@@ -37,44 +35,16 @@ export async function handleStripeWebhook(req: Request, res: Response): Promise<
         return;
     }
 
-    // ── Dispatch by event type ───────────────────────────────────────
     logger.info({ type: event.type, id: event.id }, "Stripe webhook received");
 
-    switch (event.type) {
-        case "payment_intent.succeeded": {
-            const paymentIntent = event.data.object;
-            logger.info({ id: paymentIntent.id }, "PaymentIntent succeeded");
-            // TODO: Fulfill the order, update DB, send confirmation email
-            break;
-        }
-
-        case "checkout.session.completed": {
-            const session = event.data.object;
-            logger.info({ id: session.id }, "Checkout session completed");
-            // TODO: Handle checkout completion
-            break;
-        }
-
-        case "customer.subscription.created":
-        case "customer.subscription.updated":
-        case "customer.subscription.deleted": {
-            const subscription = event.data.object;
-            logger.info({ id: subscription.id, status: subscription.status }, `Subscription ${event.type}`);
-            // TODO: Update subscription status in DB
-            break;
-        }
-
-        case "invoice.payment_failed": {
-            const invoice = event.data.object;
-            logger.warn({ id: invoice.id }, "Invoice payment failed");
-            // TODO: Notify user, retry logic
-            break;
-        }
-
-        default:
-            logger.debug({ type: event.type }, "Unhandled Stripe event type");
+    const accepted = await setIfNotExists(`idemp:stripe:${event.id}`, "1", 24 * 60 * 60);
+    if (!accepted) {
+        logger.info({ id: event.id }, "Duplicate Stripe event ignored");
+        res.status(StatusCodes.OK).json({ received: true, duplicate: true });
+        return;
     }
 
-    // Always acknowledge receipt
-    res.status(200).json({ received: true });
+    await dispatchStripeEvent(event);
+
+    res.status(StatusCodes.OK).json({ received: true });
 }

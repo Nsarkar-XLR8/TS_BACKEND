@@ -50,13 +50,7 @@ jobs:
         run: npm ci
 
       - name: Type Check
-        run: npm run typecheck
-
-      - name: Lint Code
-        run: npm run lint
-
-      - name: Run Tests
-        run: npm run test
+        run: npm run check:all
 
       - name: Build Project
         run: npm run build

@@ -1,31 +1,93 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import crypto from "node:crypto";
-import { StatusCodes } from 'http-status-codes';
-import jwt from 'jsonwebtoken';
-import { IUser } from '../user/user.interface.js';
-import { User } from '../user/user.model.js';
-import AppError from '@/errors/AppError.js';
-import { sendEmail } from '@/utils/sendEmail.js';
-import { ILoginCredentials, ILoginResponse } from './auth.interface.js';
-import { createToken } from '@/utils/jwt.js';
-import config from '@/config/index.js';
-import { blacklistToken, isTokenBlacklisted } from '@/lib/redis.js';
+import { StatusCodes } from "http-status-codes";
+import jwt from "jsonwebtoken";
+import ms from "ms";
+import type { SignOptions } from "jsonwebtoken";
+import AppError from "@/errors/AppError.js";
+import { blacklistToken, deleteKey, getValue, isTokenBlacklisted, setWithExpiry } from "@/lib/redis.js";
+import { messageBus } from "@/messaging/messageBus.js";
+import { sendEmail } from "@/utils/sendEmail.js";
+import { createToken } from "@/utils/jwt.js";
+import config from "@/config/index.js";
+import { IUser } from "../user/user.interface.js";
+import { User } from "../user/user.model.js";
+import { ILoginCredentials, ILoginResponse } from "./auth.interface.js";
 
+type RefreshClaims = {
+    userId: string;
+    email: string;
+    role: string;
+    tokenType: "refresh";
+    tokenFamilyId: string;
+    jti?: string;
+    iat?: number;
+    exp?: number;
+};
 
+function refreshTtlSeconds(): number {
+    const value = ms(config.jwt.refreshExpiresIn as ms.StringValue);
+    return typeof value === "number" ? Math.max(1, Math.floor(value / 1000)) : 30 * 24 * 60 * 60;
+}
 
+function sessionKey(userId: string, familyId: string) {
+    return `rt:session:${userId}:${familyId}`;
+}
+
+async function publishAuthAudit(action: string, payload: Record<string, unknown>): Promise<void> {
+    try {
+        await messageBus.publish({
+            name: "audit.auth",
+            kind: "audit",
+            payload: {
+                action,
+                ...payload,
+                at: new Date().toISOString(),
+            },
+        });
+    } catch {
+        // best-effort audit
+    }
+}
+
+async function issueRefreshToken(input: {
+    userId: string;
+    email: string;
+    role: string;
+    familyId?: string;
+}) {
+    const familyId = input.familyId ?? crypto.randomUUID();
+    const tokenId = crypto.randomUUID();
+
+    const token = jwt.sign(
+        {
+            userId: input.userId,
+            email: input.email,
+            role: input.role,
+            tokenType: "refresh",
+            tokenFamilyId: familyId,
+        },
+        config.jwt.refreshSecret,
+        {
+            expiresIn: config.jwt.refreshExpiresIn as ms.StringValue,
+            jwtid: tokenId,
+        } as SignOptions
+    );
+
+    await setWithExpiry(sessionKey(input.userId, familyId), tokenId, refreshTtlSeconds());
+
+    return { token, tokenId, familyId };
+}
 
 const registerUser = async (payload: IUser) => {
-    // 1. Check existence
     const isUserExists = await User.findOne({ email: payload.email }).lean();
     if (isUserExists) {
-        throw AppError.of(StatusCodes.BAD_REQUEST, 'User already exists');
+        throw AppError.of(StatusCodes.BAD_REQUEST, "User already exists");
     }
 
-    // 2. Generate cryptographically secure OTP
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    // 3. Create User
     const newUser = await User.create({
         ...payload,
         otp,
@@ -34,107 +96,93 @@ const registerUser = async (payload: IUser) => {
     });
 
     if (!newUser) {
-        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create user');
+        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to create user");
     }
 
-    // 4. Send Email
     const emailResult = await sendEmail({
         to: newUser.email,
-        subject: 'Verify Your Email',
+        subject: "Verify Your Email",
         html: `<h1>Your OTP is: ${otp}</h1><p>Expires in 10 minutes.</p>`,
     });
 
-    // 5. Elite Guard: If email fails, remove user so they can try again
     if (!emailResult.success) {
         await User.findByIdAndDelete(newUser._id);
-        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, 'Email delivery failed. Try again.');
+        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, "Email delivery failed. Try again.");
     }
 
-    // 6. Return Clean Data (No password, no OTP)
     return {
         _id: newUser._id,
         email: newUser.email,
         firstName: newUser.firstName,
-        lastName: newUser.lastName
+        lastName: newUser.lastName,
     };
 };
 
 const verifyEmail = async (email: string, otp: string) => {
-    // 1. Find user (Explicitly select OTP fields)
-    const user = await User.findOne({ email }).select('+otp +otpExpires');
+    const user = await User.findOne({ email }).select("+otp +otpExpires");
 
     if (!user) {
-        throw AppError.of(StatusCodes.NOT_FOUND, 'User not found');
+        throw AppError.of(StatusCodes.NOT_FOUND, "User not found");
     }
 
-    // 2. Validate OTP and Expiry
     if (!user.otp || user.otp !== otp) {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid OTP');
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Invalid OTP");
     }
 
     if (user.otpExpires && new Date() > user.otpExpires) {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'OTP has expired');
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "OTP has expired");
     }
 
-    // 3. Update User status and Clear OTP
     user.isVerified = true;
     user.otp = undefined;
     user.otpExpires = undefined;
     await user.save();
 
-    return { message: 'Email verified successfully' };
+    return { message: "Email verified successfully" };
 };
 
-
 const loginUser = async (payload: ILoginCredentials): Promise<ILoginResponse> => {
-    // 1. Check if user exists (Must explicitly select password)
-    const user = await User.findOne({ email: payload.email }).select('+password').lean();
+    const user = await User.findOne({ email: payload.email }).select("+password").lean();
 
     if (!user) {
-        throw AppError.of(StatusCodes.NOT_FOUND, 'User not found', [
-            { path: 'email', message: 'No account associated with this email' }
+        throw AppError.of(StatusCodes.NOT_FOUND, "User not found", [
+            { path: "email", message: "No account associated with this email" },
         ]);
     }
 
-    // 2. Check if user is verified
     if (!user.isVerified) {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Email not verified', [
-            { path: 'email', message: 'Please verify your email before logging in' }
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Email not verified", [
+            { path: "email", message: "Please verify your email before logging in" },
         ]);
     }
 
-    // 3. Compare Password
     const isPasswordMatch = await User.isPasswordMatch(payload.password, user.password);
 
     if (!isPasswordMatch) {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid credentials', [
-            { path: 'password', message: 'Incorrect password' }
+        await publishAuthAudit("login_failed", { email: payload.email, reason: "invalid_password" });
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Invalid credentials", [
+            { path: "password", message: "Incorrect password" },
         ]);
     }
 
-    // 4. Create JWT Payload
     const jwtPayload = {
         userId: user._id.toString(),
         email: user.email,
         role: user.role,
     };
 
-    // 5. Generate Tokens
-    const accessToken = createToken(
-        jwtPayload,
-        config.jwt.jwtAccessSecret,
-        config.jwt.jwtExpiresIn
-    );
+    const accessToken = createToken(jwtPayload, config.jwt.jwtAccessSecret, config.jwt.jwtExpiresIn);
+    const refresh = await issueRefreshToken({
+        userId: jwtPayload.userId,
+        email: jwtPayload.email,
+        role: jwtPayload.role,
+    });
 
-    const refreshToken = createToken(
-        jwtPayload,
-        config.jwt.refreshSecret,
-        config.jwt.refreshExpiresIn
-    );
+    await publishAuthAudit("login_success", { userId: jwtPayload.userId, email: jwtPayload.email });
 
     return {
         accessToken,
-        refreshToken,
+        refreshToken: refresh.token,
         user: {
             _id: user._id.toString(),
             firstName: user.firstName,
@@ -144,162 +192,160 @@ const loginUser = async (payload: ILoginCredentials): Promise<ILoginResponse> =>
             avatar: user.avatar,
         },
     };
-
 };
-
-
 
 const forgotPassword = async (email: string) => {
     const user = await User.findOne({ email }).lean();
-
-    // Security: If user doesn't exist, don't throw error. 
-    // Return early so controller can send generic success.
     if (!user) return;
 
-    // 1. Generate cryptographically secure OTP
     const otp = crypto.randomInt(100000, 999999).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-    // 2. Update User Record
     await User.findByIdAndUpdate(user._id, {
         otp,
         otpExpires,
     });
 
-    // 3. Send Email
     const emailResult = await sendEmail({
         to: user.email,
-        subject: 'Password Reset OTP',
+        subject: "Password Reset OTP",
         html: `<div>Your OTP is: <b>${otp}</b>. It expires in 10 minutes.</div>`,
     });
 
     if (!emailResult.success) {
-        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to send email');
+        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send email");
     }
 };
 
 const verifyOtp = async (payload: { email: string; otp: string }) => {
-    // 1. Find user with matching email, otp, and check if not expired
     const user = await User.findOne({
         email: payload.email,
         otp: payload.otp,
-        otpExpires: { $gt: new Date() }, // Check if current time < expiry
+        otpExpires: { $gt: new Date() },
     }).lean();
 
     if (!user) {
-        throw AppError.of(StatusCodes.BAD_REQUEST, 'Invalid or expired OTP');
+        throw AppError.of(StatusCodes.BAD_REQUEST, "Invalid or expired OTP");
     }
 
-    // 2. Generate a short-lived Reset Token (15 mins)
     const resetToken = jwt.sign(
-        { email: user.email, role: user.role, type: 'password_reset' },
+        { email: user.email, role: user.role, type: "password_reset" },
         config.jwt.jwtAccessSecret,
-        { expiresIn: '15m' }
+        { expiresIn: "15m" }
     );
 
     return { resetToken };
 };
 
-
-// Remove confirmPassword from here. It is useless at this layer.
 const resetPassword = async (token: string, newPassword: string) => {
     let decoded;
     try {
         decoded = jwt.verify(token, config.jwt.jwtAccessSecret) as any;
     } catch {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid or expired reset token');
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Invalid or expired reset token");
     }
 
-    if (decoded.type !== 'password_reset') {
-        throw AppError.of(StatusCodes.FORBIDDEN, 'Invalid token type');
+    if (decoded.type !== "password_reset") {
+        throw AppError.of(StatusCodes.FORBIDDEN, "Invalid token type");
     }
 
     const user = await User.findOne({ email: decoded.email });
-    if (!user) throw AppError.of(StatusCodes.NOT_FOUND, 'User not found');
+    if (!user) throw AppError.of(StatusCodes.NOT_FOUND, "User not found");
 
-    // Update and Wipe
     user.password = newPassword;
     user.otp = undefined;
     user.otpExpires = undefined;
 
-    await user.save(); // Must use .save() to trigger hashing middleware
+    await user.save();
 };
-
-
-// ── New: Refresh Access Token ────────────────────────────────────────
 
 const refreshAccessToken = async (refreshToken: string) => {
-    let decoded;
+    let decoded: RefreshClaims;
     try {
-        decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as any;
+        decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as RefreshClaims;
     } catch {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Invalid or expired refresh token', [
-            { path: 'refreshToken', message: 'Please login again' }
+        await publishAuthAudit("refresh_failed", { reason: "invalid_or_expired_token" });
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Invalid or expired refresh token", [
+            { path: "refreshToken", message: "Please login again" },
         ]);
     }
 
-    const { userId, email, role } = decoded;
-    if (!userId || !email) {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Malformed refresh token');
+    const { userId, email, role, tokenFamilyId, jti } = decoded;
+    if (!userId || !email || !tokenFamilyId || !jti) {
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Malformed refresh token");
     }
 
-    // Check if token has been blacklisted (logout)
-    const blacklisted = await isTokenBlacklisted(`refresh:${userId}:${decoded.iat}`);
+    const blacklisted = await isTokenBlacklisted(`refresh:${jti}`);
     if (blacklisted) {
-        throw AppError.of(StatusCodes.UNAUTHORIZED, 'Token has been revoked', [
-            { path: 'refreshToken', message: 'This refresh token has been revoked. Please login again.' }
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Token has been revoked", [
+            { path: "refreshToken", message: "This refresh token has been revoked. Please login again." },
         ]);
     }
 
-    // Verify user still exists
+    const activeTokenId = await getValue(sessionKey(userId, tokenFamilyId));
+
+    if (!activeTokenId || activeTokenId !== jti) {
+        await deleteKey(sessionKey(userId, tokenFamilyId));
+        await publishAuthAudit("refresh_reuse_detected", { userId, tokenFamilyId });
+        throw AppError.of(StatusCodes.UNAUTHORIZED, "Refresh token reuse detected", [
+            { path: "refreshToken", message: "Session invalidated. Please login again." },
+        ]);
+    }
+
     const user = await User.findById(userId).lean();
     if (!user) {
-        throw AppError.of(StatusCodes.NOT_FOUND, 'User no longer exists');
+        throw AppError.of(StatusCodes.NOT_FOUND, "User no longer exists");
     }
 
-    // Issue new access token
-    const newAccessToken = createToken(
-        { userId, email, role },
-        config.jwt.jwtAccessSecret,
-        config.jwt.jwtExpiresIn
-    );
+    const newAccessToken = createToken({ userId, email, role }, config.jwt.jwtAccessSecret, config.jwt.jwtExpiresIn);
+    const rotated = await issueRefreshToken({ userId, email, role, familyId: tokenFamilyId });
 
-    return { accessToken: newAccessToken };
+    const ttl = decoded.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 0;
+    if (ttl > 0) {
+        await blacklistToken(`refresh:${jti}`, ttl);
+    }
+
+    await publishAuthAudit("refresh_success", { userId, tokenFamilyId });
+
+    return {
+        accessToken: newAccessToken,
+        refreshToken: rotated.token,
+    };
 };
-
-
-// ── New: Logout (Blacklist refresh token) ────────────────────────────
 
 const logoutUser = async (userId: string, refreshToken?: string) => {
     if (refreshToken) {
         try {
-            const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as any;
-            const ttl = decoded.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 0;
-            if (ttl > 0) {
-                await blacklistToken(`refresh:${userId}:${decoded.iat}`, ttl);
+            const decoded = jwt.verify(refreshToken, config.jwt.refreshSecret) as RefreshClaims;
+            if (decoded.jti) {
+                const ttl = decoded.exp ? decoded.exp - Math.floor(Date.now() / 1000) : 0;
+                if (ttl > 0) {
+                    await blacklistToken(`refresh:${decoded.jti}`, ttl);
+                }
+            }
+            if (decoded.tokenFamilyId) {
+                await deleteKey(sessionKey(userId, decoded.tokenFamilyId));
             }
         } catch {
-            // Token already expired or invalid — nothing to blacklist
+            // ignore invalid token on logout
         }
     }
-    return { message: 'Logged out successfully' };
+
+    await publishAuthAudit("logout", { userId });
+    return { message: "Logged out successfully" };
 };
-
-
-// ── New: Resend OTP ──────────────────────────────────────────────────
 
 const resendOtp = async (email: string) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-        throw AppError.of(StatusCodes.NOT_FOUND, 'User not found');
+        throw AppError.of(StatusCodes.NOT_FOUND, "User not found");
     }
 
     if (user.isVerified) {
-        throw AppError.of(StatusCodes.BAD_REQUEST, 'Email is already verified');
+        throw AppError.of(StatusCodes.BAD_REQUEST, "Email is already verified");
     }
 
-    // Generate new cryptographically secure OTP
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -309,15 +355,15 @@ const resendOtp = async (email: string) => {
 
     const emailResult = await sendEmail({
         to: user.email,
-        subject: 'Verify Your Email - New OTP',
+        subject: "Verify Your Email - New OTP",
         html: `<h1>Your new OTP is: ${otp}</h1><p>Expires in 10 minutes.</p>`,
     });
 
     if (!emailResult.success) {
-        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to send OTP email');
+        throw AppError.of(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to send OTP email");
     }
 
-    return { message: 'OTP resent successfully' };
+    return { message: "OTP resent successfully" };
 };
 
 export const AuthService = {
@@ -329,7 +375,5 @@ export const AuthService = {
     resetPassword,
     refreshAccessToken,
     logoutUser,
-    resendOtp
+    resendOtp,
 };
-
-

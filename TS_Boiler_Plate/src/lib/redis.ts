@@ -51,6 +51,27 @@ export function getRedis(): Redis | null {
     return redis;
 }
 
+export async function setIfNotExists(key: string, value: string, expiresInSeconds: number): Promise<boolean> {
+    if (!redis) return true;
+    const result = await redis.set(key, value, "EX", expiresInSeconds, "NX");
+    return result === "OK";
+}
+
+export async function setWithExpiry(key: string, value: string, expiresInSeconds: number): Promise<void> {
+    if (!redis) return;
+    await redis.set(key, value, "EX", expiresInSeconds);
+}
+
+export async function getValue(key: string): Promise<string | null> {
+    if (!redis) return null;
+    return redis.get(key);
+}
+
+export async function deleteKey(key: string): Promise<void> {
+    if (!redis) return;
+    await redis.del(key);
+}
+
 // ── Token Blacklist Helpers ──────────────────────────────────────────
 
 /**
@@ -71,4 +92,3 @@ export async function isTokenBlacklisted(tokenId: string): Promise<boolean> {
     const result = await redis.get(`bl:${tokenId}`);
     return result === "1";
 }
-

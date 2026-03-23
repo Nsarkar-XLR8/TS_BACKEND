@@ -1,0 +1,22 @@
+extends:
+  - "spectral:oas"
+
+rules:
+  # Every operation must have an operationId
+  operation-operationId-valid-in-url: warn
+  operation-operationId-unique: error
+
+  # Require descriptions on operations
+  operation-description: warn
+
+  # Require tags on all operations
+  operation-tags: warn
+
+  # Path parameters must be in camelCase
+  path-params: error
+
+  # Ensure info.contact is provided
+  info-contact: warn
+
+  # Servers should use HTTPS
+  oas3-server-trailing-slash: error

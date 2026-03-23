@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 
 import AppError from "../errors/AppError.js";
 import { isUserRole, type UserRole } from "../constant/role.constant.js";
+import { canAccess } from "../auth/policy.js";
 
 type JwtClaims = jwt.JwtPayload & {
     userId?: string;
@@ -86,7 +87,7 @@ export const Auth =
                 // FIX: Actually attach the data to the request object
                 req.user = { userId, role, iat, exp } as { userId: string; role: UserRole; iat?: number; exp?: number; };
 
-                if (allowedRoles.length > 0 && !allowedRoles.includes(role)) {
+                if (allowedRoles.length > 0 && !canAccess(role, allowedRoles)) {
                     throw AppError.of(StatusCodes.FORBIDDEN, "Forbidden", [
                         { path: "authorization", message: "Insufficient permissions" }
                     ]);

@@ -40,4 +40,21 @@ describe('Health Check', () => {
         const response = await request(app).get('/metrics');
         expect(response.status).toBe(200);
     });
+
+    it('GET /api/v1/system/capabilities should return 200', async () => {
+        const response = await request(app).get('/api/v1/system/capabilities');
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual(
+            expect.objectContaining({
+                success: true,
+                message: 'Capability report',
+            })
+        );
+    });
+
+    it('GET /api/v1/system/pipeline-ready should return status with messaging info', async () => {
+        const response = await request(app).get('/api/v1/system/pipeline-ready');
+        expect([200, 503]).toContain(response.status);
+        expect(response.body?.data).toHaveProperty('messaging');
+    });
 });

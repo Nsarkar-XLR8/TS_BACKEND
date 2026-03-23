@@ -1,125 +1,81 @@
 import rateLimit from "express-rate-limit";
 import { StatusCodes } from "http-status-codes";
 import AppError from "../errors/AppError.js";
+import { createRedisStore } from "../lib/rateLimitStore.js";
 
 
-/**
- * General API rate limiter.
- * - Uses IP-based limiting by default
- * - Sends errors through AppError so your global errorHandler formats the response
- */
-const apiRateLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 300, // adjust for your needs (e.g., 100/15m for public APIs)
-    standardHeaders: true, // adds RateLimit-* headers (RFC-ish)
-    legacyHeaders: false,
+function createLimiter(options: {
+    windowMs: number;
+    limit: number;
+    message: string;
+    path: string;
+}) {
+    return rateLimit({
+        windowMs: options.windowMs,
+        limit: options.limit,
+        standardHeaders: true,
+        legacyHeaders: false,
+        store: createRedisStore(`rl:${options.path}:`),
+        handler: (req, _res, next) => {
+            next(
+                AppError.of(StatusCodes.TOO_MANY_REQUESTS, options.message, [
+                    { path: options.path, message: `Rate limit exceeded for ${req.ip}` },
+                ])
+            );
+        },
+    });
+}
 
-    // If you're behind a reverse proxy, set app.set("trust proxy", 1) in app.ts
-    // Otherwise req.ip may not reflect the real client IP.
-
-    handler: (req, _res, next) => {
-        next(
-            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Too many requests", [
-                { path: "rateLimit", message: `Rate limit exceeded for IP: ${req.ip}` }
-            ])
-        );
-    }
+const apiRateLimiter = createLimiter({
+    windowMs: 15 * 60 * 1000,
+    limit: 300,
+    message: "Too many requests",
+    path: "rateLimit",
 });
 
-/**
- * Stricter limiter for auth endpoints (login/register/forgot-password).
- */
-const authRateLimiter = rateLimit({
-    windowMs: 10 * 60 * 1000, // 10 minutes
-    limit: 30, // e.g., 30 attempts per 10 minutes
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (req, _res, next) => {
-        next(
-            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Too many attempts", [
-                { path: "auth", message: `Too many auth attempts for IP: ${req.ip}` }
-            ])
-        );
-    }
+const authRateLimiter = createLimiter({
+    windowMs: 10 * 60 * 1000,
+    limit: 30,
+    message: "Too many auth attempts",
+    path: "auth",
 });
 
-/**
- * Extremely strict limiter for sensitive actions like OTP verification
- * and password resets.
- */
-const sensitiveActionLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    limit: 10, // 10 attempts per 15 minutes
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (_req, _res, next) => {
-        next(
-            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Security delay", [
-                { path: "security", message: "Too many sensitive attempts. Please wait 15 minutes." }
-            ])
-        );
-    }
+const sensitiveActionLimiter = createLimiter({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    message: "Security delay",
+    path: "security",
 });
 
-/**
- * User-Based Limiting (Authenticated)
- * - Identifies users by their userId instead of IP.
- * - Prevents one malicious user from affecting an entire corporate network IP.
- * - MUST be placed AFTER Auth() middleware in the route.
- */
 const authenticatedUserLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 500, // high limit for logged-in users
+    limit: 500,
     standardHeaders: true,
     legacyHeaders: false,
-    validate: { default: false }, // Disable internal IP validation for custom key generator
-    keyGenerator: (req) => {
-        // Fallback to IP if userId isn't available (e.g. middleware misplacement)
-        return (req.user as any)?.userId || req.ip || "unknown";
-    },
+    validate: { default: false },
+    store: createRedisStore("rl:user:"),
+    keyGenerator: (req) => (req.user as { userId?: string } | undefined)?.userId || req.ip || "unknown",
     handler: (_req, _res, next) => {
         next(
             AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Account limit reached", [
-                { path: "rateLimit", message: "Too many requests for this account. Slow down." }
+                { path: "rateLimit", message: "Too many requests for this account. Slow down." },
             ])
         );
-    }
+    },
 });
 
-/**
- * Resource-Specific Limiting (Expensive Tasks)
- * - Use for heavy CPU/Memory tasks like PDF generation or large exports.
- */
-const heavyTaskLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    limit: 20, // e.g. 20 heavy reports per hour
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (_req, _res, next) => {
-        next(
-            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Resource busy", [
-                { path: "resource", message: "Heavy task limit reached. Try again in an hour." }
-            ])
-        );
-    }
+const heavyTaskLimiter = createLimiter({
+    windowMs: 60 * 60 * 1000,
+    limit: 20,
+    message: "Resource busy",
+    path: "resource",
 });
 
-/**
- * External API Limiter
- * - Use for routes that wrap paid third-party services (OpenAI, Stripe, etc).
- */
-const externalApiLimiter = rateLimit({
-    windowMs: 24 * 60 * 60 * 1000, // 24 hours
-    limit: 50, // 50 credits/calls per day
-    standardHeaders: true,
-    legacyHeaders: false,
-    handler: (_req, _res, next) => {
-        next(
-            AppError.of(StatusCodes.TOO_MANY_REQUESTS, "Credit limit reached", [
-                { path: "billing", message: "Daily external service quota exceeded." }
-            ])
-        );
-    }
+const externalApiLimiter = createLimiter({
+    windowMs: 24 * 60 * 60 * 1000,
+    limit: 50,
+    message: "Credit limit reached",
+    path: "billing",
 });
 
 export const rateLimiter = {
@@ -128,5 +84,5 @@ export const rateLimiter = {
     sensitiveActionLimiter,
     authenticatedUserLimiter,
     heavyTaskLimiter,
-    externalApiLimiter
+    externalApiLimiter,
 };

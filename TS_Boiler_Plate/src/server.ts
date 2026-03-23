@@ -10,8 +10,11 @@ import { connectRedis, disconnectRedis } from "./lib/redis.js";
 import { connectKafka, disconnectKafka } from "./queues/kafka.js";
 import { connectRabbitMQ, disconnectRabbitMQ } from "./queues/rabbitmq.js";
 import { startJobs, stopJobs } from "./jobs/index.js";
+import { initBullMQ, closeBullMQ } from "./queues/bullmq.js";
+import { startEmailWorker } from "./queues/workers/emailWorker.js";
 import { cleanExpiredOtpJob } from "./jobs/examples/cleanExpiredOtp.js";
 import { initPassport } from "./auth/passport.js";
+import { logCapabilityReport } from "./messaging/index.js";
 
 
 const app = createApp();
@@ -52,6 +55,7 @@ const shutdown = (signal: string) => {
 
             try {
                 // 3. Disconnect Queues and DBs
+                await closeBullMQ();
                 await disconnectKafka();
                 await disconnectRabbitMQ();
                 await disconnectRedis();
@@ -87,8 +91,13 @@ process.on("SIGTERM", () => shutdown("SIGTERM"));
 try {
     await connectDB();
     await connectRedis(config.redis.url);
-    await connectRabbitMQ(config.queues.rabbitmqUrl);
-    await connectKafka(config.queues.kafkaBrokers);
+    await connectRabbitMQ(config.features.rabbitmqEnabled ? config.queues.rabbitmqUrl : undefined);
+    await connectKafka(config.features.kafkaEnabled ? config.queues.kafkaBrokers : undefined);
+
+    // Initialize BullMQ with existing Redis connection if enabled
+    initBullMQ(config.features.bullmqEnabled ? config.redis.url : undefined);
+    logCapabilityReport();
+    startEmailWorker();
     
     // Start Cron Jobs after DB is ready
     startJobs([cleanExpiredOtpJob]);

@@ -42,3 +42,6 @@ lerna-debug.log*
 
 # Build info
 *.tsbuildinfo
+
+# Generated OpenAPI spec (from export:openapi script)
+openapi.json

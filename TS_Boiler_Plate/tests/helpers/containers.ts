@@ -1,0 +1,55 @@
+/**
+ * Testcontainers Helpers
+ *
+ * Provides utilities to spin up real MongoDB and Redis containers
+ * for integration tests. Requires Docker to be running.
+ */
+import { GenericContainer, type StartedTestContainer } from "testcontainers";
+
+let mongoContainer: StartedTestContainer | null = null;
+let redisContainer: StartedTestContainer | null = null;
+
+export interface ContainerURIs {
+    mongoUri: string;
+    redisUri: string;
+}
+
+/**
+ * Start MongoDB and Redis containers.
+ * Returns their connection URIs.
+ */
+export async function startContainers(): Promise<ContainerURIs> {
+    // Start MongoDB container
+    mongoContainer = await new GenericContainer("mongo:6")
+        .withExposedPorts(27017)
+        .withStartupTimeout(60_000)
+        .start();
+
+    const mongoHost = mongoContainer.getHost();
+    const mongoPort = mongoContainer.getMappedPort(27017);
+    const mongoUri = `mongodb://${mongoHost}:${mongoPort}/test_db`;
+
+    // Start Redis container
+    redisContainer = await new GenericContainer("redis:7-alpine")
+        .withExposedPorts(6379)
+        .withStartupTimeout(30_000)
+        .start();
+
+    const redisHost = redisContainer.getHost();
+    const redisPort = redisContainer.getMappedPort(6379);
+    const redisUri = `redis://${redisHost}:${redisPort}`;
+
+    return { mongoUri, redisUri };
+}
+
+/**
+ * Stop and remove all test containers.
+ */
+export async function stopContainers(): Promise<void> {
+    await Promise.allSettled([
+        mongoContainer?.stop(),
+        redisContainer?.stop(),
+    ]);
+    mongoContainer = null;
+    redisContainer = null;
+}

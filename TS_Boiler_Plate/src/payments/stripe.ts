@@ -11,6 +11,11 @@ let stripe: Stripe | null = null;
 export function getStripe(): Stripe | null {
     if (stripe) return stripe;
 
+    if (!config.features.stripeEnabled) {
+        logger.debug("Stripe disabled via STRIPE_ENABLED flag");
+        return null;
+    }
+
     const key = config.stripe.stripeSecretKey;
     if (!key) {
         logger.debug("Stripe SDK not initialised — STRIPE_SECRET_KEY not set");
